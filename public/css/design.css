@@ -732,3 +732,29 @@ html, body {
   .month-detail-table { font-size: 10px; }
   .month-detail-table th, .month-detail-table td { padding: 4px 6px; }
 }
+
+
+/* Language Toggle */
+.lang-toggle {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border-light);
+  background: var(--card-bg);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+.lang-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(249, 115, 22, 0.15);
+}
+.lang-toggle:active {
+  transform: scale(0.96);
+}
