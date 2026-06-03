@@ -140,6 +140,15 @@
 </div>
 
 <script>
+// Fallback lang toggle (if i18n.js fails)
+if (typeof toggleLang === "undefined") {
+  window.toggleLang = function() {
+    var lang = (localStorage.getItem("sport-lang") || "zh") === "zh" ? "en" : "zh";
+    localStorage.setItem("sport-lang", lang);
+    location.reload();
+  };
+}
+
 // ===== STATE =====
 const state = {
   data: null,
@@ -743,8 +752,9 @@ async function loadData(force = false) {
   } catch (err) {
     $("loading").style.display = state.data ? "none" : "grid";
     $("status").textContent = "更新失败";
-    $("error").textContent = err.message;
+    $("error").textContent = "[DEBUG] " + (err.message || err.toString());
     $("error").style.display = "block";
+    console.error("loadData error:", err);
   }
 }
 
