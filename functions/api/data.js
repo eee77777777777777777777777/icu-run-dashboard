@@ -1,4 +1,4 @@
-// Cloudflare Pages Function: /api/data
+﻿// Cloudflare Pages Function: /api/data
 export async function onRequest(context) {
   const { request, env } = context;
   const url = new URL(request.url);
@@ -22,6 +22,17 @@ export async function onRequest(context) {
   data.generated_at = new Date().toISOString();
   data.cached = !forceRefresh;
   data._debug = { hasApiKey: hasKey, hasAthleteId: hasId, error: errorMsg };
+  if (url.searchParams.get("debug") === "wellness" && hasKey && hasId) {
+    try {
+      const auth = btoa("API_KEY:" + env.INTERVALS_ICU_API_KEY);
+      const wr = await fetch(`https://intervals.icu/api/v1/athlete/${env.INTERVALS_ICU_ATHLETE_ID}/wellness?oldest=2026-05-01`, { headers: { Authorization: `Basic ${auth}` } });
+      const wdata = await wr.json();
+      const sample = (wdata || []).slice(-3);
+      return new Response(JSON.stringify({ count: wdata.length, sample }), { headers: { "Content-Type": "application/json" } });
+    } catch (e) {
+      return new Response(JSON.stringify({ error: e.message }), { headers: { "Content-Type": "application/json" } });
+    }
+  }
 
   return new Response(JSON.stringify(data), {
     headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Cache-Control": "public, max-age=300" }
@@ -206,3 +217,4 @@ function getStaticData() {
     health: getStaticHealth()
   };
 }
+
