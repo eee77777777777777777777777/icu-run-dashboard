@@ -752,8 +752,10 @@ async function loadData(force = false) {
   } catch (err) {
     $("loading").style.display = state.data ? "none" : "grid";
     $("status").textContent = "更新失败";
-    $("error").textContent = "[DEBUG] " + (err.message || err.toString());
+    var emsg = err.message || err.toString();
+    $("error").textContent = emsg;
     $("error").style.display = "block";
+    document.title = "ERR: " + emsg.substring(0, 60);
     console.error("loadData error:", err);
   }
 }
