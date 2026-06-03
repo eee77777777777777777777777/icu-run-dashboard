@@ -1,0 +1,15 @@
+<div style="padding:8px 0">
+  <p style="font-weight:700;font-size:14px;margin:0 0 8px">今日训练建议 — <span id="tt-date">加载中</span></p>
+  <p style="margin:0 0 12px;color:var(--text-secondary);line-height:1.7" id="tt-content">
+    轻松跑 8-10km，心率控制在 Zone 2 (130-145 bpm)。注意步频保持 175+，跑后充分拉伸。
+  </p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap" id="tt-details">
+    <span style="padding:4px 10px;background:var(--green-bg);color:var(--green);border-radius:999px;font-size:12px">距离: 8-10 km</span>
+    <span style="padding:4px 10px;background:var(--blue-bg);color:var(--blue);border-radius:999px;font-size:12px">心率: Zone 2</span>
+    <span style="padding:4px 10px;background:var(--purple-bg);color:var(--purple);border-radius:999px;font-size:12px">步频: 175+</span>
+    <span style="padding:4px 10px;background:var(--yellow-bg);color:var(--yellow);border-radius:999px;font-size:12px">强度: 轻松</span>
+  </div>
+</div>
+<script>
+document.getElementById("tt-date").textContent = new Date().toLocaleDateString("zh-CN", { weekday:"long", month:"long", day:"numeric" });
+</script>
