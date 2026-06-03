@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>AI 训练计划 - ICU 跑步看板</title>
+  <link rel="stylesheet" href="/css/design.css" />
+</head>
+<body>
+<main class="app">
+  <header class="topbar">
+    <a class="brand" href="/" style="text-decoration:none">
+      <strong>AI 训练计划</strong>
+      <span>每日训练建议 · 比赛策略</span>
+    </a>
+    <nav class="nav-links">
+      <a class="nav-link" href="/">首页</a>
+      <a class="nav-link" href="/health.html">健康报告</a>
+      <a class="nav-link" href="/club.html">俱乐部</a>
+      <a class="nav-link active" href="/training_plan.html">AI 训练</a>
+    </nav>
+  </header>
+
+  <div class="status-bar">
+    <span class="pulse"></span>
+    <span id="status">正在加载训练计划</span>
+  </div>
+  <div class="error" id="error"></div>
+  <div class="loading" id="loading">正在连接数据源...</div>
+
+  <!-- Race Countdown -->
+  <div class="section" style="margin-top:0">
+    <div class="section-head">
+      <div class="section-title">比赛倒计时</div>
+    </div>
+    <div class="insight-card" id="race-countdown">
+      <div class="insight-title" id="race-name">加载中...</div>
+      <div id="race-days" style="font-size:36px;font-weight:800;margin:8px 0"></div>
+      <div id="race-date" style="color:var(--text-muted)"></div>
+    </div>
+  </div>
+
+  <!-- Health Snapshot -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">健康快照</div>
+      <div class="section-note" id="snapshot-date"></div>
+    </div>
+    <div class="status-grid" id="snapshot-cards"></div>
+  </div>
+
+  <!-- Today's Training -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">今日训练方案</div>
+      <div class="section-note">AI 生成</div>
+    </div>
+    <div class="note" id="training-plan-content">加载中...</div>
+  </div>
+
+  <!-- Upcoming Plan -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">7天训练计划</div>
+      <div class="section-note">预览</div>
+    </div>
+    <div class="list" id="plan-list"></div>
+  </div>
+
+  <!-- Race Strategy -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">比赛策略</div>
+      <div class="section-note">AI 分析</div>
+    </div>
+    <div class="note" id="race-strategy">暂无比赛策略数据</div>
+  </div>
+</main>
+
+<script>
+const fmt  = new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 1 });
+const fmt0 = new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 0 });
+const $ = (id) => document.getElementById(id);
+
+async function loadPlan() {
+  try {
+    $("error").style.display = "none";
+    $("status").textContent = "正在加载...";
+    const resp = await fetch("/api/training_plan", { cache: "no-store" });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    renderPlan(data);
+  } catch (err) {
+    $("loading").innerHTML = `
+      <div style="text-align:center">
+        <p>训练计划功能需要后端支持。</p>
+        <p style="color:var(--text-muted);font-size:13px">请确认 /api/training_plan 端点已配置。</p>
+      </div>`;
+    $("status").textContent = "后端未连接";
+  }
+}
+
+function renderPlan(data) {
+  $("loading").style.display = "none";
+  $("status").textContent = `更新于 ${new Date(data.generated_at).toLocaleString("zh-CN")}`;
+
+  // Race countdown
+  if (data.race) {
+    $("race-name").textContent = data.race.name || "下一场比赛";
+    const days = data.race.days_left;
+    $("race-days").textContent = days != null ? `${days} 天` : "--";
+    $("race-date").textContent = data.race.date || "";
+  } else {
+    $("race-countdown").innerHTML = '<div class="insight-title">暂无比赛信息</div><div style="color:var(--text-muted)">配置比赛日期后可显示倒计时</div>';
+  }
+
+  // Health snapshot
+  const snap = data.health_snapshot || {};
+  $("snapshot-date").textContent = snap.date || "";
+  $("snapshot-cards").innerHTML = [
+    { label: "HRV", value: snap.hrv ? `${fmt.format(snap.hrv)} ms` : "--" },
+    { label: "静息心率", value: snap.resting_hr ? `${fmt0.format(snap.resting_hr)} bpm` : "--" },
+    { label: "CTL", value: snap.ctl ? fmt0.format(snap.ctl) : "--" },
+    { label: "TSB", value: snap.tsb != null ? fmt0.format(snap.tsb) : "--" },
+    { label: "睡眠评分", value: snap.sleep_score ? fmt0.format(snap.sleep_score) : "--" },
+    { label: "身体电量", value: snap.body_battery != null ? fmt0.format(snap.body_battery) : "--" },
+  ].map(c => `
+    <div class="status-card">
+      <div class="card-label">${c.label}</div>
+      <div class="card-value" style="font-size:22px">${c.value}</div>
+    </div>
+  `).join("");
+
+  // Today's training
+  $("training-plan-content").innerHTML = data.today_training || "暂无今日训练方案";
+
+  // 7-day plan
+  if (data.week_plan && data.week_plan.length) {
+    const dayNames = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+    $("plan-list").innerHTML = data.week_plan.map((p, i) => `
+      <div class="row">
+        <div>
+          <div class="row-title">${p.day_name || dayNames[i] || `第${i+1}天`}</div>
+          <div class="row-meta">${p.workout || "休息"}</div>
+        </div>
+        <div class="row-score">${p.distance ? `${fmt.format(p.distance)} km` : ""}</div>
+      </div>
+    `).join("");
+  } else {
+    $("plan-list").innerHTML = '<div style="padding:16px;color:var(--text-muted)">暂无训练计划</div>';
+  }
+
+  // Race strategy
+  if (data.race_strategy) {
+    $("race-strategy").innerHTML = data.race_strategy;
+  }
+}
+
+loadPlan();
+</script>
+</body>
+</html>
