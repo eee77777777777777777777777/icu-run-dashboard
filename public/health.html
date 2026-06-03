@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>健康报告 - ICU 跑步看板</title>
+  <link rel="stylesheet" href="/css/design.css" />
+  <script src="/js/chart.umd.min.js" defer></script>
+</head>
+<body>
+<main class="app">
+  <header class="topbar">
+    <a class="brand" href="/" style="text-decoration:none">
+      <strong>健康报告</strong>
+      <span>HRV · RHR · 睡眠 · CTL · VO2max</span>
+    </a>
+    <nav class="nav-links">
+      <a class="nav-link" href="/">首页</a>
+      <a class="nav-link active" href="/health.html">健康报告</a>
+      <a class="nav-link" href="/club.html">俱乐部</a>
+      <a class="nav-link" href="/training_plan.html">AI 训练</a>
+    </nav>
+  </header>
+
+  <div class="status-bar">
+    <span class="pulse"></span>
+    <span id="status">正在加载健康数据</span>
+  </div>
+  <div class="error" id="error"></div>
+  <div class="loading" id="loading">正在连接数据源...</div>
+
+  <!-- Status Cards -->
+  <div class="status-grid" id="health-cards"></div>
+
+  <!-- Charts -->
+  <div class="section">
+    <div class="chart-grid" id="health-charts-grid"></div>
+  </div>
+</main>
+
+<script>
+const fmt  = new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 1 });
+const fmt0 = new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 0 });
+const $ = (id) => document.getElementById(id);
+
+async function loadHealth() {
+  try {
+    $("error").style.display = "none";
+    $("status").textContent = "正在加载...";
+    const resp = await fetch("/api/data?mode=health", { cache: "no-store" });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    renderHealth(data);
+  } catch (err) {
+    $("loading").style.display = "none";
+    $("status").textContent = "加载失败";
+    $("error").textContent = err.message;
+    $("error").style.display = "block";
+  }
+}
+
+function renderHealth(data) {
+  $("loading").style.display = "none";
+  $("status").textContent = `更新于 ${new Date(data.generated_at).toLocaleString("zh-CN")}`;
+  const s = data.summary || {};
+
+  // Health cards
+  const cards = [
+    { label: "HRV (rMSSD)", value: s.hrv ? `${fmt.format(s.hrv)} ms` : "--", sub: "最新7日均值", accent: "card-accent-green" },
+    { label: "静息心率", value: s.resting_hr ? `${fmt0.format(s.resting_hr)} bpm` : "--", sub: "越低越健康", accent: "card-accent-blue" },
+    { label: "睡眠评分", value: s.sleep_score ? fmt0.format(s.sleep_score) : "--", sub: "/100", accent: "card-accent-purple" },
+    { label: "睡眠时长", value: s.sleep_hours ? `${fmt.format(s.sleep_hours)} h` : "--", sub: "每晚", accent: "card-accent-cyan" },
+    { label: "CTL (体能)", value: s.ctl ? fmt0.format(s.ctl) : "--", sub: "长期训练负荷", accent: "card-accent-orange" },
+    { label: "TSB (状态)", value: s.tsb ? fmt0.format(s.tsb) : "--", sub: "正=恢复好 负=疲劳", accent: s.tsb > 0 ? "card-accent-green" : "card-accent-red" },
+    { label: "VO2max 跑步", value: s.vo2max_run ? fmt0.format(s.vo2max_run) : "--", sub: "ml/kg/min", accent: "card-accent-green" },
+    { label: "VO2max 骑行", value: s.vo2max_cycle ? fmt0.format(s.vo2max_cycle) : "--", sub: "ml/kg/min", accent: "card-accent-blue" },
+    { label: "体重", value: s.weight_kg ? `${fmt.format(s.weight_kg)} kg` : "--", sub: "最新记录", accent: "card-accent-orange" },
+    { label: "体脂率", value: s.body_fat ? `${fmt.format(s.body_fat)}%` : "--", sub: "", accent: "card-accent-purple" },
+    { label: "身体电量", value: s.body_battery != null ? fmt0.format(s.body_battery) : "--", sub: "/100", accent: "card-accent-cyan" },
+    { label: "运动准备度", value: s.readiness ? fmt0.format(s.readiness) : "--", sub: "/100", accent: "card-accent-green" },
+  ];
+
+  $("health-cards").innerHTML = cards.map(c => `
+    <div class="status-card ${c.accent}">
+      <div class="card-label">${c.label}</div>
+      <div class="card-value">${c.value}</div>
+      <div class="card-sub">${c.sub}</div>
+    </div>
+  `).join("");
+
+  // Chart placeholders
+  let chartHtml = "";
+
+  if (data.month_rows && data.month_rows.length) {
+    chartHtml += `<div class="chart-panel">
+      <div class="section-title" style="margin-bottom:8px">月度跑量 & 训练负荷</div>
+      <canvas id="monthlyChart" height="260"></canvas>
+      <div class="legend">
+        <span><i class="swatch" style="background:var(--accent)"></i>跑量</span>
+        <span><i class="swatch" style="background:var(--purple)"></i>训练负荷</span>
+      </div>
+    </div>`;
+  }
+
+  if (data.hr_bins) {
+    chartHtml += `<div class="chart-panel">
+      <div class="section-title" style="margin-bottom:8px">心率区间分布</div>
+      <canvas id="hrBinsChart" height="220"></canvas>
+    </div>`;
+  }
+
+  if (data.year_rows && data.year_rows.length) {
+    chartHtml += `<div class="chart-panel">
+      <div class="section-title" style="margin-bottom:8px">年度汇总</div>
+      <canvas id="yearChart" height="220"></canvas>
+    </div>`;
+  }
+
+  $("health-charts-grid").innerHTML = chartHtml || '<div class="note">暂无图表数据</div>';
+
+  // Draw
+  if (data.month_rows) drawMonthly(data.month_rows);
+  if (data.hr_bins) drawHRBins(data.hr_bins);
+  if (data.year_rows) drawYearly(data.year_rows);
+}
+
+function drawMonthly(rows) {
+  const canvas = $("monthlyChart");
+  if (!canvas) return;
+  const recent = rows.slice(-24);
+  new Chart(canvas.getContext("2d"), {
+    type: "bar",
+    data: {
+      labels: recent.map(r => r.period.slice(2)),
+      datasets: [
+        { label: "跑量", data: recent.map(r => r.dist), backgroundColor: "rgba(249,115,22,0.5)", borderColor: "#f97316", borderWidth: 1, borderRadius: 4, yAxisID: "y" },
+        { label: "负荷", data: recent.map(r => r.load), type: "line", borderColor: "#8b5cf6", borderWidth: 2, pointRadius: 2, tension: 0.3, yAxisID: "y1" }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: "#e2e8f0" }, ticks: { color: "#94a3b8", font: { size: 10 } } },
+        y: { position: "left", grid: { color: "#e2e8f0" }, ticks: { color: "#94a3b8" } },
+        y1: { position: "right", grid: { display: false }, ticks: { color: "#8b5cf6" } }
+      }
+    }
+  });
+}
+
+function drawHRBins(bins) {
+  const canvas = $("hrBinsChart");
+  if (!canvas) return;
+  const labels = Object.keys(bins);
+  const values = Object.values(bins);
+  const colors = { "<130": "#16a34a", "130-145": "#0891b2", "145-155": "#ca8a04", "155+": "#ef4444" };
+  new Chart(canvas.getContext("2d"), {
+    type: "bar",
+    data: { labels, datasets: [{ data: values, backgroundColor: labels.map(l => colors[l] || "#94a3b8"), borderRadius: 6 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: "#475569" } },
+        y: { grid: { color: "#e2e8f0" }, ticks: { color: "#94a3b8" } }
+      }
+    }
+  });
+}
+
+function drawYearly(rows) {
+  const canvas = $("yearChart");
+  if (!canvas) return;
+  new Chart(canvas.getContext("2d"), {
+    type: "bar",
+    data: {
+      labels: rows.map(r => r.period),
+      datasets: [
+        { label: "跑量 km", data: rows.map(r => r.dist), backgroundColor: "rgba(249,115,22,0.5)", borderColor: "#f97316", borderWidth: 1, borderRadius: 6, yAxisID: "y" },
+        { label: "训练负荷", data: rows.map(r => r.load), type: "line", borderColor: "#8b5cf6", borderWidth: 2.5, pointRadius: 3, tension: 0.2, yAxisID: "y1" }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: true, labels: { color: "#475569", font: { size: 11 } } } },
+      scales: {
+        x: { grid: { color: "#e2e8f0" }, ticks: { color: "#94a3b8" } },
+        y: { position: "left", grid: { color: "#e2e8f0" }, ticks: { color: "#94a3b8" } },
+        y1: { position: "right", grid: { display: false }, ticks: { color: "#8b5cf6" } }
+      }
+    }
+  });
+}
+
+loadHealth();
+</script>
+</body>
+</html>
