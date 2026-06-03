@@ -6,6 +6,15 @@ export async function onRequest(context) {
 
   const hasKey = !!env.INTERVALS_ICU_API_KEY;
   const hasId = !!env.INTERVALS_ICU_ATHLETE_ID;
+  // Debug: raw wellness sample
+  const debugMode = url.searchParams.get("debug");
+  if (debugMode === "wellness" && hasKey && hasId) {
+    const auth = btoa("API_KEY:" + env.INTERVALS_ICU_API_KEY);
+    const wr = await fetch("https://intervals.icu/api/v1/athlete/" + env.INTERVALS_ICU_ATHLETE_ID + "/wellness?oldest=2026-05-01", { headers: { Authorization: "Basic " + auth } });
+    const wdata = await wr.json();
+    const sample = (wdata || []).slice(-3);
+    return new Response(JSON.stringify({ count: wdata.length, sample }), { headers: { "Content-Type": "application/json" } });
+  }
 
   let data = null;
   let errorMsg = null;
@@ -217,4 +226,6 @@ function getStaticData() {
     health: getStaticHealth()
   };
 }
+
+
 
