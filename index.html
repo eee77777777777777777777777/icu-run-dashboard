@@ -416,7 +416,7 @@ function render(data) {
     v.hidden = v.id !== state.currentTab);
 
   const s = data.summary || {};
-  $("subtitle").textContent = data.cached ? "缓存数据，后台定时刷新 : "已拉取最新数据;
+  $("subtitle").textContent = data.cached ? "缓存数据，后台定时刷新" : "已拉取最新数据";
   $("status").textContent = `更新于${new Date(data.generated_at).toLocaleString("zh-CN")}`;
   $("motivation").textContent = motivations[Math.floor(Math.random() * motivations.length)];
 
@@ -436,9 +436,9 @@ function renderRaceCard(race) {
     $("race-days").textContent = race.days_left != null ? `${race.days_left} 天` : "--";
     $("race-info").textContent = `${race.date || ""} · ${race.distance || ""} · ${race.location || ""}`;
   } else {
-    $("race-name").textContent = "下一场比赛;
+    $("race-name").textContent = "下一场比赛";
     $("race-days").textContent = "待定";
-    $("race-info").textContent = "配置比赛信息后可显示倒计时;
+    $("race-info").textContent = "配置比赛信息后可显示倒计时";
   }
 }
 
@@ -456,13 +456,13 @@ function renderRecovery(s) {
 // ===== STATUS CARDS =====
 function renderStatusCards(s) {
   const cards = [
-    { label: "三年总跑量, value: `${fmt.format(s.distance_km)} km`, sub: `${s.first_run || ""} 开始`, accent: "card-accent-orange" },
+    { label: "三年总跑量", value: `${fmt.format(s.distance_km)} km`, sub: `${s.first_run || ""} 开始`, accent: "card-accent-orange" },
     { label: "跑步次数", value: fmt0.format(s.activity_count), sub: "三年累计", accent: "card-accent-blue" },
-    { label: "平均每周", value: `${fmt.format(s.weekly_km)} km`, sub: "km / 周, accent: "card-accent-green" },
+    { label: "平均每周", value: `${fmt.format(s.weekly_km)} km`, sub: "km / 周", accent: "card-accent-green" },
     { label: "训练负荷", value: fmt0.format(s.training_load), sub: "三年累计 TL", accent: "card-accent-purple" },
-    { label: "平均心率", value: s.avg_hr ? `${fmt.format(s.avg_hr)} bpm` : "--", sub: "全部活动均值, accent: "card-accent-red" },
-    { label: "平均配速, value: s.avg_pace ? fmt.format(s.avg_pace) : "--", sub: "/km", accent: "card-accent-cyan" },
-    { label: "总时长, value: s.total_hours ? `${fmt0.format(s.total_hours)} h` : "--", sub: "三年累计", accent: "card-accent-orange" },
+    { label: "平均心率", value: s.avg_hr ? `${fmt.format(s.avg_hr)} bpm` : "--", sub: "全部活动均值", accent: "card-accent-red" },
+    { label: "平均配速", value: s.avg_pace ? fmt.format(s.avg_pace) : "--", sub: "/km", accent: "card-accent-cyan" },
+    { label: "总时长", value: s.total_hours ? `${fmt0.format(s.total_hours)} h` : "--", sub: "三年累计", accent: "card-accent-orange" },
     { label: "最高月", value: s.peak_month_km ? `${fmt.format(s.peak_month_km)} km` : "--", sub: s.peak_month || "", accent: "card-accent-green" },
   ];
   $("status-cards").innerHTML = cards.map(c => `
@@ -477,7 +477,7 @@ function renderStatusCards(s) {
 // ===== INSIGHT =====
 function renderInsight(s, monthRows) {
   if (!monthRows || !monthRows.length) {
-    $("insight").textContent = "还没有足够的跑步数据生成判断。;
+    $("insight").textContent = "还没有足够的跑步数据生成判断。";
     return;
   }
   const peak = [...monthRows].sort((a, b) => b.load - a.load)[0];
@@ -543,7 +543,7 @@ function renderTrainingToday(tt) {
     $("training-today").innerHTML = tt.content;
     $("training-date").textContent = tt.date || "";
   } else {
-    $("training-today").innerHTML = "今日训练建议将通过 /training_today.html 异步加载。;
+    $("training-today").innerHTML = "今日训练建议将通过 /training_today.html 异步加载。";
   }
 }
 
