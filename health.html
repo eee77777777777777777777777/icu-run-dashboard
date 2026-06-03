@@ -12,7 +12,7 @@
   <header class="topbar">
     <a class="brand" href="/" style="text-decoration:none">
       <strong>健康报告</strong>
-      <span>HRV · RHR · 睡眠 · CTL · VO2max</span>
+      <span>HRV · RHR · 睡眠 · CTL · VO2max · Garmin</span>
     </a>
     <nav class="nav-links">
       <a class="nav-link" href="/">首页</a>
@@ -39,19 +39,23 @@
 </main>
 
 <script>
-const fmt  = new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 1 });
-const fmt0 = new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 0 });
-const $ = (id) => document.getElementById(id);
+var fmt  = new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 1 });
+var fmt0 = new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 0 });
+var $ = (id) => document.getElementById(id);
 
 async function loadHealth() {
   try {
     $("error").style.display = "none";
     $("status").textContent = "正在加载...";
-    const resp = await fetch("/api/data?mode=health", { cache: "no-store" });
+    var resp = await fetch("/api/data", { cache: "no-store" });
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const data = await resp.json();
+    var data = await resp.json();
     if (data.error) throw new Error(data.error);
-    renderHealth(data);
+    if (data.health) {
+      renderHealth(data.health, data);
+    } else {
+      $("health-cards").innerHTML = '<div class="note" style="grid-column:1/-1">健康数据待同步 — 请确保 Garmin 已连接 Intervals.icu</div>';
+    }
   } catch (err) {
     $("loading").style.display = "none";
     $("status").textContent = "加载失败";
@@ -60,138 +64,184 @@ async function loadHealth() {
   }
 }
 
-function renderHealth(data) {
+function renderHealth(h, data) {
   $("loading").style.display = "none";
-  $("status").textContent = `更新于 ${new Date(data.generated_at).toLocaleString("zh-CN")}`;
-  const s = data.summary || {};
+  $("status").textContent = (data && data.generated_at) ? `更新于 ${new Date(data.generated_at).toLocaleString("zh-CN")}` : "数据已加载";
 
-  // Health cards
-  const cards = [
-    { label: "HRV (rMSSD)", value: s.hrv ? `${fmt.format(s.hrv)} ms` : "--", sub: "最新7日均值", accent: "card-accent-green" },
-    { label: "静息心率", value: s.resting_hr ? `${fmt0.format(s.resting_hr)} bpm` : "--", sub: "越低越健康", accent: "card-accent-blue" },
-    { label: "睡眠评分", value: s.sleep_score ? fmt0.format(s.sleep_score) : "--", sub: "/100", accent: "card-accent-purple" },
-    { label: "睡眠时长", value: s.sleep_hours ? `${fmt.format(s.sleep_hours)} h` : "--", sub: "每晚", accent: "card-accent-cyan" },
-    { label: "CTL (体能)", value: s.ctl ? fmt0.format(s.ctl) : "--", sub: "长期训练负荷", accent: "card-accent-orange" },
-    { label: "TSB (状态)", value: s.tsb ? fmt0.format(s.tsb) : "--", sub: "正=恢复好 负=疲劳", accent: s.tsb > 0 ? "card-accent-green" : "card-accent-red" },
-    { label: "VO2max 跑步", value: s.vo2max_run ? fmt0.format(s.vo2max_run) : "--", sub: "ml/kg/min", accent: "card-accent-green" },
-    { label: "VO2max 骑行", value: s.vo2max_cycle ? fmt0.format(s.vo2max_cycle) : "--", sub: "ml/kg/min", accent: "card-accent-blue" },
-    { label: "体重", value: s.weight_kg ? `${fmt.format(s.weight_kg)} kg` : "--", sub: "最新记录", accent: "card-accent-orange" },
-    { label: "体脂率", value: s.body_fat ? `${fmt.format(s.body_fat)}%` : "--", sub: "", accent: "card-accent-purple" },
-    { label: "身体电量", value: s.body_battery != null ? fmt0.format(s.body_battery) : "--", sub: "/100", accent: "card-accent-cyan" },
-    { label: "运动准备度", value: s.readiness ? fmt0.format(s.readiness) : "--", sub: "/100", accent: "card-accent-green" },
+  var trendArrow = (v) => v == null ? "" : v > 0 ? " ↑" : v < 0 ? " ↓" : " →";
+  var trendClass = (v, inverse) => {
+    if (v == null) return "";
+    var good = inverse ? v < 0 : v > 0;
+    return good ? "badge-good" : "badge-bad";
+  };
+
+  var cards = [
+    { label: "HRV (rMSSD)", value: h.hrv ? fmt.format(h.hrv) + " ms" : "--", sub: (h.hrv_trend != null ? fmt.format(Math.abs(h.hrv_trend)) + " ms" + trendArrow(h.hrv_trend) : ""), badge: h.hrv_trend != null ? { cls: trendClass(h.hrv_trend, false), txt: h.hrv_trend > 0 ? "↑ 变好" : h.hrv_trend < 0 ? "↓ 注意" : "→" } : null, accent: "card-accent-green" },
+    { label: "静息心率", value: h.resting_hr ? fmt0.format(h.resting_hr) + " bpm" : "--", sub: (h.rhr_trend != null ? fmt.format(Math.abs(h.rhr_trend)) + " bpm" + trendArrow(h.rhr_trend) : "越低越好"), badge: h.rhr_trend != null ? { cls: trendClass(h.rhr_trend, true), txt: h.rhr_trend < 0 ? "↓ 变好" : h.rhr_trend > 0 ? "↑ 注意" : "→" } : null, accent: "card-accent-blue" },
+    { label: "睡眠评分", value: h.sleep_score ? fmt0.format(h.sleep_score) : "--", sub: "/100", badge: h.sleep_score > 80 ? { cls: "badge-good", txt: "优秀" } : h.sleep_score > 60 ? { cls: "badge-info", txt: "良好" } : null, accent: "card-accent-purple" },
+    { label: "睡眠时长", value: h.sleep_hours ? fmt.format(h.sleep_hours) + " h" : "--", sub: "每晚", accent: "card-accent-cyan" },
+    { label: "CTL (体能)", value: h.ctl ? fmt0.format(h.ctl) : "--", sub: "长期训练负荷", accent: "card-accent-orange" },
+    { label: "TSB (状态)", value: h.tsb != null ? fmt0.format(h.tsb) : "--", sub: h.tsb != null ? (h.tsb > 0 ? "恢复良好" : h.tsb > -10 ? "正常疲劳" : h.tsb > -20 ? "中度疲劳" : "深度疲劳") : "", badge: h.tsb != null ? { cls: h.tsb > 0 ? "badge-good" : h.tsb > -10 ? "badge-info" : "badge-warn", txt: h.tsb > 0 ? "恢复" : "疲劳" } : null, accent: h.tsb > -5 ? "card-accent-green" : "card-accent-red" },
+    { label: "ATL (疲劳)", value: h.atl ? fmt0.format(h.atl) : "--", sub: "短期训练负荷", accent: "card-accent-red" },
+    { label: "体重", value: h.weight_kg ? fmt.format(h.weight_kg) + " kg" : "--", sub: "最新记录", accent: "card-accent-orange" },
+    { label: "体脂率", value: h.body_fat ? fmt.format(h.body_fat) + "%" : "--", sub: "", accent: "card-accent-purple" },
+    { label: "身体电量", value: h.body_battery != null ? fmt0.format(h.body_battery) : "待同步", sub: "/100", badge: h.body_battery == null ? { cls: "badge-info", txt: "需 Garmin" } : null, accent: "card-accent-cyan" },
+    { label: "VO2max 跑步", value: h.vo2max_run ? fmt0.format(h.vo2max_run) : "待同步", sub: "ml/kg/min", badge: h.vo2max_run == null ? { cls: "badge-info", txt: "需 Garmin" } : null, accent: "card-accent-green" },
+    { label: "VO2max 骑行", value: h.vo2max_cycle ? fmt0.format(h.vo2max_cycle) : "待同步", sub: "ml/kg/min", badge: h.vo2max_cycle == null ? { cls: "badge-info", txt: "需 Garmin" } : null, accent: "card-accent-blue" },
   ];
 
-  $("health-cards").innerHTML = cards.map(c => `
-    <div class="status-card ${c.accent}">
-      <div class="card-label">${c.label}</div>
-      <div class="card-value">${c.value}</div>
-      <div class="card-sub">${c.sub}</div>
-    </div>
-  `).join("");
+  $("health-cards").innerHTML = cards.map(function(c) {
+    return '<div class="status-card ' + c.accent + '"><div class="card-label">' + c.label + '</div><div class="card-value">' + c.value + '</div><div class="card-sub">' + c.sub + '</div>' + (c.badge ? '<div class="card-badge ' + c.badge.cls + '">' + c.badge.txt + '</div>' : '') + '</div>';
+  }).join("");
 
-  // Chart placeholders
-  let chartHtml = "";
+  // Charts
+  var html = "";
 
-  if (data.month_rows && data.month_rows.length) {
-    chartHtml += `<div class="chart-panel">
-      <div class="section-title" style="margin-bottom:8px">月度跑量 & 训练负荷</div>
-      <canvas id="monthlyChart" height="260"></canvas>
-      <div class="legend">
-        <span><i class="swatch" style="background:var(--accent)"></i>跑量</span>
-        <span><i class="swatch" style="background:var(--purple)"></i>训练负荷</span>
-      </div>
-    </div>`;
+  if (h.ctl_data && h.ctl_data.length > 5) {
+    html += '<div class="chart-panel"><div class="section-title" style="margin-bottom:8px">CTL · ATL · TSB</div><canvas id="ctlChart" height="260"></canvas><div class="legend"><span><i class="swatch" style="background:var(--accent)"></i>CTL</span><span><i class="swatch" style="background:var(--red)"></i>ATL</span><span><i class="swatch" style="background:var(--blue)"></i>TSB</span></div></div>';
   }
 
-  if (data.hr_bins) {
-    chartHtml += `<div class="chart-panel">
-      <div class="section-title" style="margin-bottom:8px">心率区间分布</div>
-      <canvas id="hrBinsChart" height="220"></canvas>
-    </div>`;
+  if (h.hrv_data && h.hrv_data.length > 5) {
+    html += '<div class="chart-panel"><div class="section-title" style="margin-bottom:8px">HRV 趋势 (rMSSD)</div><canvas id="hrvChart" height="260"></canvas></div>';
   }
 
-  if (data.year_rows && data.year_rows.length) {
-    chartHtml += `<div class="chart-panel">
-      <div class="section-title" style="margin-bottom:8px">年度汇总</div>
-      <canvas id="yearChart" height="220"></canvas>
-    </div>`;
+  if (h.rhr_data && h.rhr_data.length > 5) {
+    html += '<div class="chart-panel"><div class="section-title" style="margin-bottom:8px">静息心率</div><canvas id="rhrChart" height="260"></canvas></div>';
   }
 
-  $("health-charts-grid").innerHTML = chartHtml || '<div class="note">暂无图表数据</div>';
+  if (h.sleep_data && h.sleep_data.length > 5) {
+    html += '<div class="chart-panel"><div class="section-title" style="margin-bottom:8px">睡眠评分 & 时长</div><canvas id="sleepChart" height="260"></canvas><div class="legend"><span><i class="swatch" style="background:var(--purple)"></i>评分</span><span><i class="swatch" style="background:var(--cyan)"></i>时长 (h)</span></div></div>';
+  }
 
-  // Draw
-  if (data.month_rows) drawMonthly(data.month_rows);
-  if (data.hr_bins) drawHRBins(data.hr_bins);
-  if (data.year_rows) drawYearly(data.year_rows);
-}
+  if (h.weight_data && h.weight_data.length > 3) {
+    html += '<div class="chart-panel"><div class="section-title" style="margin-bottom:8px">体重 & 体脂</div><canvas id="weightChart" height="260"></canvas><div class="legend"><span><i class="swatch" style="background:var(--accent)"></i>体重 kg</span><span><i class="swatch" style="background:var(--purple)"></i>体脂 %</span></div></div>';
+  }
 
-function drawMonthly(rows) {
-  const canvas = $("monthlyChart");
-  if (!canvas) return;
-  const recent = rows.slice(-24);
-  new Chart(canvas.getContext("2d"), {
-    type: "bar",
-    data: {
-      labels: recent.map(r => r.period.slice(2)),
-      datasets: [
-        { label: "跑量", data: recent.map(r => r.dist), backgroundColor: "rgba(249,115,22,0.5)", borderColor: "#f97316", borderWidth: 1, borderRadius: 4, yAxisID: "y" },
-        { label: "负荷", data: recent.map(r => r.load), type: "line", borderColor: "#8b5cf6", borderWidth: 2, pointRadius: 2, tension: 0.3, yAxisID: "y1" }
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { color: "#e2e8f0" }, ticks: { color: "#94a3b8", font: { size: 10 } } },
-        y: { position: "left", grid: { color: "#e2e8f0" }, ticks: { color: "#94a3b8" } },
-        y1: { position: "right", grid: { display: false }, ticks: { color: "#8b5cf6" } }
-      }
+  if (data && data.month_rows && data.month_rows.length) {
+    html += '<div class="chart-panel"><div class="section-title" style="margin-bottom:8px">月度跑量 & 训练负荷</div><canvas id="monthlyChart" height="260"></canvas><div class="legend"><span><i class="swatch" style="background:var(--accent)"></i>跑量</span><span><i class="swatch" style="background:var(--purple)"></i>负荷</span></div></div>';
+  }
+
+  $("health-charts-grid").innerHTML = html || '<div class="note">图表加载中...</div>';
+
+  var chartDefaults = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: "#e2e8f0" }, ticks: { color: "#94a3b8", font: { size: 9 }, maxTicksLimit: 15, autoSkip: true } },
+      y: { grid: { color: "#e2e8f0" }, ticks: { color: "#94a3b8" } }
     }
-  });
-}
+  };
 
-function drawHRBins(bins) {
-  const canvas = $("hrBinsChart");
-  if (!canvas) return;
-  const labels = Object.keys(bins);
-  const values = Object.values(bins);
-  const colors = { "<130": "#16a34a", "130-145": "#0891b2", "145-155": "#ca8a04", "155+": "#ef4444" };
-  new Chart(canvas.getContext("2d"), {
-    type: "bar",
-    data: { labels, datasets: [{ data: values, backgroundColor: labels.map(l => colors[l] || "#94a3b8"), borderRadius: 6 }] },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { display: false }, ticks: { color: "#475569" } },
-        y: { grid: { color: "#e2e8f0" }, ticks: { color: "#94a3b8" } }
+  if (h.ctl_data && h.ctl_data.length > 5) {
+    var recent = h.ctl_data.slice(-90);
+    new Chart($("ctlChart").getContext("2d"), {
+      type: "line",
+      data: {
+        labels: recent.map(function(d) { return d.date.slice(5); }),
+        datasets: [
+          { label: "CTL", data: recent.map(function(d) { return d.ctl; }), borderColor: "#f97316", borderWidth: 2, pointRadius: 1, tension: 0.3, spanGaps: true },
+          { label: "ATL", data: recent.map(function(d) { return d.atl; }), borderColor: "#ef4444", borderWidth: 2, pointRadius: 1, tension: 0.3, spanGaps: true },
+          { label: "TSB", data: recent.map(function(d) { return d.tsb; }), borderColor: "#3b82f6", borderWidth: 1.5, pointRadius: 1, tension: 0.3, borderDash: [4, 3], spanGaps: true, yAxisID: "y1" }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: "#e2e8f0" }, ticks: { color: "#94a3b8", font: { size: 9 }, maxTicksLimit: 12 } },
+          y: { position: "left", grid: { color: "#e2e8f0" }, ticks: { color: "#94a3b8" } },
+          y1: { position: "right", grid: { display: false }, ticks: { color: "#3b82f6" } }
+        }
       }
-    }
-  });
-}
+    });
+  }
 
-function drawYearly(rows) {
-  const canvas = $("yearChart");
-  if (!canvas) return;
-  new Chart(canvas.getContext("2d"), {
-    type: "bar",
-    data: {
-      labels: rows.map(r => r.period),
-      datasets: [
-        { label: "跑量 km", data: rows.map(r => r.dist), backgroundColor: "rgba(249,115,22,0.5)", borderColor: "#f97316", borderWidth: 1, borderRadius: 6, yAxisID: "y" },
-        { label: "训练负荷", data: rows.map(r => r.load), type: "line", borderColor: "#8b5cf6", borderWidth: 2.5, pointRadius: 3, tension: 0.2, yAxisID: "y1" }
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: true, labels: { color: "#475569", font: { size: 11 } } } },
-      scales: {
-        x: { grid: { color: "#e2e8f0" }, ticks: { color: "#94a3b8" } },
-        y: { position: "left", grid: { color: "#e2e8f0" }, ticks: { color: "#94a3b8" } },
-        y1: { position: "right", grid: { display: false }, ticks: { color: "#8b5cf6" } }
+  if (h.hrv_data && h.hrv_data.length > 5) {
+    var hrv = h.hrv_data.slice(-60);
+    new Chart($("hrvChart").getContext("2d"), {
+      type: "line",
+      data: { labels: hrv.map(function(d) { return d.date.slice(5); }), datasets: [{ data: hrv.map(function(d) { return d.val; }), borderColor: "#16a34a", backgroundColor: "rgba(22,163,74,0.08)", borderWidth: 2, pointRadius: 1, tension: 0.3, fill: true, spanGaps: true }] },
+      options: chartDefaults
+    });
+  }
+
+  if (h.rhr_data && h.rhr_data.length > 5) {
+    var rhr = h.rhr_data.slice(-60);
+    new Chart($("rhrChart").getContext("2d"), {
+      type: "line",
+      data: { labels: rhr.map(function(d) { return d.date.slice(5); }), datasets: [{ data: rhr.map(function(d) { return d.val; }), borderColor: "#3b82f6", backgroundColor: "rgba(59,130,246,0.08)", borderWidth: 2, pointRadius: 1, tension: 0.3, fill: true, spanGaps: true }] },
+      options: chartDefaults
+    });
+  }
+
+  if (h.sleep_data && h.sleep_data.length > 5) {
+    var slp = h.sleep_data.slice(-60);
+    new Chart($("sleepChart").getContext("2d"), {
+      type: "bar",
+      data: {
+        labels: slp.map(function(d) { return d.date.slice(5); }),
+        datasets: [
+          { label: "评分", data: slp.map(function(d) { return d.score; }), backgroundColor: "rgba(139,92,246,0.5)", borderColor: "#8b5cf6", borderWidth: 0, borderRadius: 4, yAxisID: "y" },
+          { label: "时长", data: slp.map(function(d) { return d.hours; }), borderColor: "#0891b2", borderWidth: 2, pointRadius: 1, tension: 0.3, type: "line", yAxisID: "y1" }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: "#e2e8f0" }, ticks: { color: "#94a3b8", font: { size: 9 }, maxTicksLimit: 12 } },
+          y: { position: "left", grid: { color: "#e2e8f0" }, ticks: { color: "#94a3b8" }, max: 100 },
+          y1: { position: "right", grid: { display: false }, ticks: { color: "#0891b2" } }
+        }
       }
-    }
-  });
+    });
+  }
+
+  if (h.weight_data && h.weight_data.length > 3) {
+    var wt = h.weight_data.slice(-60);
+    new Chart($("weightChart").getContext("2d"), {
+      type: "line",
+      data: {
+        labels: wt.map(function(d) { return d.date.slice(5); }),
+        datasets: [
+          { label: "体重", data: wt.map(function(d) { return d.weight; }), borderColor: "#f97316", borderWidth: 2, pointRadius: 2, tension: 0.2, spanGaps: true, yAxisID: "y" },
+          { label: "体脂", data: wt.map(function(d) { return d.bodyFat; }), borderColor: "#8b5cf6", borderWidth: 2, pointRadius: 2, tension: 0.2, borderDash: [5, 3], spanGaps: true, yAxisID: "y1" }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: "#e2e8f0" }, ticks: { color: "#94a3b8", font: { size: 9 }, maxTicksLimit: 12 } },
+          y: { position: "left", grid: { color: "#e2e8f0" }, ticks: { color: "#94a3b8" } },
+          y1: { position: "right", grid: { display: false }, ticks: { color: "#8b5cf6" } }
+        }
+      }
+    });
+  }
+
+  if (data && data.month_rows && data.month_rows.length) {
+    var mon = data.month_rows.slice(-24);
+    new Chart($("monthlyChart").getContext("2d"), {
+      type: "bar",
+      data: {
+        labels: mon.map(function(r) { return r.period.slice(2).replace("-", "."); }),
+        datasets: [
+          { label: "跑量", data: mon.map(function(r) { return r.dist; }), backgroundColor: "rgba(249,115,22,0.5)", borderColor: "#f97316", borderWidth: 1, borderRadius: 4, yAxisID: "y" },
+          { label: "负荷", data: mon.map(function(r) { return r.load; }), type: "line", borderColor: "#8b5cf6", borderWidth: 2, pointRadius: 2, tension: 0.3, yAxisID: "y1" }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: "#e2e8f0" }, ticks: { color: "#94a3b8", font: { size: 9 } } },
+          y: { position: "left", grid: { color: "#e2e8f0" }, ticks: { color: "#94a3b8" } },
+          y1: { position: "right", grid: { display: false }, ticks: { color: "#8b5cf6" } }
+        }
+      }
+    });
+  }
 }
 
 loadHealth();
