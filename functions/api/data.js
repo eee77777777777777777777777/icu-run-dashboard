@@ -1,4 +1,4 @@
-﻿// Cloudflare Pages Function: /api/data
+// Cloudflare Pages Function: /api/data
 export async function onRequest(context) {
   const { request, env } = context;
   const url = new URL(request.url);
@@ -6,14 +6,13 @@ export async function onRequest(context) {
 
   const hasKey = !!env.INTERVALS_ICU_API_KEY;
   const hasId = !!env.INTERVALS_ICU_ATHLETE_ID;
+
   // Debug: raw wellness sample
-  const debugMode = url.searchParams.get("debug");
-  if (debugMode === "wellness" && hasKey && hasId) {
+  if (url.searchParams.get("debug") === "wellness" && hasKey && hasId) {
     const auth = btoa("API_KEY:" + env.INTERVALS_ICU_API_KEY);
-    const wr = await fetch("https://intervals.icu/api/v1/athlete/" + env.INTERVALS_ICU_ATHLETE_ID + "/wellness?oldest=2026-05-01", { headers: { Authorization: "Basic " + auth } });
+    const wr = await fetch(`https://intervals.icu/api/v1/athlete/${env.INTERVALS_ICU_ATHLETE_ID}/wellness?oldest=2026-05-01`, { headers: { Authorization: "Basic " + auth } });
     const wdata = await wr.json();
-    const sample = (wdata || []).slice(-3);
-    return new Response(JSON.stringify({ count: wdata.length, sample }), { headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ count: wdata.length, sample: (wdata || []).slice(-3) }), { headers: { "Content-Type": "application/json" } });
   }
 
   let data = null;
@@ -31,17 +30,6 @@ export async function onRequest(context) {
   data.generated_at = new Date().toISOString();
   data.cached = !forceRefresh;
   data._debug = { hasApiKey: hasKey, hasAthleteId: hasId, error: errorMsg };
-  if (url.searchParams.get("debug") === "wellness" && hasKey && hasId) {
-    try {
-      const auth = btoa("API_KEY:" + env.INTERVALS_ICU_API_KEY);
-      const wr = await fetch(`https://intervals.icu/api/v1/athlete/${env.INTERVALS_ICU_ATHLETE_ID}/wellness?oldest=2026-05-01`, { headers: { Authorization: `Basic ${auth}` } });
-      const wdata = await wr.json();
-      const sample = (wdata || []).slice(-3);
-      return new Response(JSON.stringify({ count: wdata.length, sample }), { headers: { "Content-Type": "application/json" } });
-    } catch (e) {
-      return new Response(JSON.stringify({ error: e.message }), { headers: { "Content-Type": "application/json" } });
-    }
-  }
 
   return new Response(JSON.stringify(data), {
     headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Cache-Control": "public, max-age=300" }
@@ -113,7 +101,7 @@ function processIntervalsData(wellness, activities) {
   const yearMap = {};
   monthRows.forEach(m => {
     const yr = m.period.slice(0, 4);
-    if (!yearMap[yr]) yearMap[yr] = { period: yr, dist: 0, load: 0, runs: 0, avg_hr: 0, hrCount: 0 };
+    if (!yearMap[yr]) yearMap[yr] = { period: yr, dist: 0, load: 0, runs: 0 };
     yearMap[yr].dist += m.dist; yearMap[yr].load += m.load; yearMap[yr].runs += m.runs;
   });
   const yearRows = Object.values(yearMap).map(y => ({ period: y.period, dist: Math.round(y.dist * 10) / 10, load: Math.round(y.load), runs: y.runs }));
@@ -163,48 +151,38 @@ function processHealthData(wellness) {
   const latest = w[w.length - 1] || {};
   const prev = w[w.length - 2] || {};
 
-  // Calculate trends
   const hrvTrend = latest.hrv && prev.hrv ? (latest.hrv - prev.hrv) : null;
-  const rhrTrend = latest.resting_hr && prev.resting_hr ? (latest.resting_hr - prev.resting_hr) : null;
+  const rhrTrend = latest.restingHR && prev.restingHR ? (latest.restingHR - prev.restingHR) : null;
 
-  // Build time series (last 90 days)
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - 90);
   const cutoffStr = cutoff.toISOString().slice(0, 10);
   const recent = w.filter(d => d.id >= cutoffStr);
 
-  // Sleep score: convert 1-5 to 0-100
   const sleepToScore = (q) => q != null ? Math.round(q * 20) : null;
 
   return {
     hrv: latest.hrv || null,
     hrv_trend: hrvTrend,
-    resting_hr: latest.resting_hr || null,
+    resting_hr: latest.restingHR || null,
     rhr_trend: rhrTrend,
-    sleep_score: sleepToScore(latest.sleep_quality),
-    sleep_hours: latest.sleep_secs ? Math.round(latest.sleep_secs / 360) / 10 : null,
+    sleep_score: sleepToScore(latest.sleepQuality),
+    sleep_hours: latest.sleepSecs ? Math.round(latest.sleepSecs / 360) / 10 : null,
     ctl: latest.ctl || null,
     atl: latest.atl || null,
-    tsb: latest.tsb || null,
-    weight_kg: latest.body?.weight_kg || null,
-    body_fat: latest.body?.body_fat_percent || null,
+    tsb: latest.rampRate || null,
+    weight_kg: latest.weight || null,
+    body_fat: latest.bodyFat || null,
     body_battery: null,
-    vo2max_run: null,
+    vo2max_run: latest.vo2max || null,
     vo2max_cycle: null,
-    readiness: null,
+    readiness: latest.readiness || null,
+    has_garmin_sync: !!(latest.hrv || latest.restingHR || latest.sleepSecs || latest.weight),
     hrv_data: recent.map(d => ({ date: d.id, val: d.hrv })).filter(d => d.val != null),
-    rhr_data: recent.map(d => ({ date: d.id, val: d.resting_hr })).filter(d => d.val != null),
-    sleep_data: recent.map(d => ({
-      date: d.id,
-      score: sleepToScore(d.sleep_quality),
-      hours: d.sleep_secs ? Math.round(d.sleep_secs / 360) / 10 : null
-    })).filter(d => d.score != null),
-    weight_data: recent.map(d => ({
-      date: d.id,
-      weight: d.body?.weight_kg,
-      bodyFat: d.body?.body_fat_percent
-    })).filter(d => d.weight != null),
-    ctl_data: recent.map(d => ({ date: d.id, ctl: d.ctl, atl: d.atl, tsb: d.tsb })).filter(d => d.ctl != null)
+    rhr_data: recent.map(d => ({ date: d.id, val: d.restingHR })).filter(d => d.val != null),
+    sleep_data: recent.map(d => ({ date: d.id, score: sleepToScore(d.sleepQuality), hours: d.sleepSecs ? Math.round(d.sleepSecs / 360) / 10 : null })).filter(d => d.score != null),
+    weight_data: recent.map(d => ({ date: d.id, weight: d.weight, bodyFat: d.bodyFat })).filter(d => d.weight != null),
+    ctl_data: recent.map(d => ({ date: d.id, ctl: d.ctl, atl: d.atl, tsb: d.rampRate })).filter(d => d.ctl != null)
   };
 }
 
@@ -215,6 +193,7 @@ function getStaticHealth() {
     ctl: null, atl: null, tsb: null,
     weight_kg: null, body_fat: null,
     body_battery: null, vo2max_run: null, vo2max_cycle: null, readiness: null,
+    has_garmin_sync: false,
     hrv_data: [], rhr_data: [], sleep_data: [], weight_data: [], ctl_data: []
   };
 }
@@ -226,6 +205,3 @@ function getStaticData() {
     health: getStaticHealth()
   };
 }
-
-
-
