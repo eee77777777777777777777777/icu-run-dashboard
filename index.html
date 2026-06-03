@@ -1,9 +1,9 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>ICU 璺戞鐪嬫澘</title>
+  <title>ICU 跑步看板</title>
   <link rel="stylesheet" href="/css/design.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="/js/chart.umd.min.js" defer></script>
@@ -14,29 +14,29 @@
   <!-- Navigation -->
   <header class="topbar">
     <a class="brand" href="/" style="text-decoration:none">
-      <strong>ICU 璺戞鐪嬫澘</strong>
-      <span id="subtitle">鍏綉鐗堬紝鍔ㄦ€佹洿鏂?/span>
+      <strong>ICU 跑步看板</strong>
+      <span id="subtitle" data-i18n="status.live">公网版，动态更新</span>
     </a>
     <nav class="nav-links">
-      <a class="nav-link active" href="/">棣栭〉</a>
-      <a class="nav-link" href="/health.html">鍋ュ悍鎶ュ憡</a>
-      <a class="nav-link" href="/club.html">淇变箰閮?/a>
-      <a class="nav-link" href="/training_plan.html">AI 璁粌</a>
+      <a class="nav-link active" href="/" data-i18n="nav.home">首页</a>
+      <a class="nav-link" href="/health.html" data-i18n="nav.health">健康报告</a>
+      <a class="nav-link" href="/training_plan.html" data-i18n="nav.training">AI 训练</a>
     </nav>
+    <button id="lang-toggle" class="lang-toggle" onclick="toggleLang()" title="Switch language">EN</button>
   </header>
 
   <div class="status-bar">
     <span class="pulse"></span>
-    <span id="status">姝ｅ湪鍔犺浇鏈€鏂版暟鎹?/span>
+    <span id="status" data-i18n="status.loading">正在加载最新数据</span>
   </div>
   <div class="error" id="error"></div>
-  <div class="loading" id="loading">姝ｅ湪杩炴帴鏁版嵁婧?..</div>
+  <div class="loading" id="loading">正在连接数据源...</div>
 
   <!-- Main Tabs -->
   <nav class="tabs" id="main-tabs">
-    <button class="tab active" data-view="overview">鎬昏</button>
-    <button class="tab" data-view="health">鍋ュ悍蹇収</button>
-    <button class="tab" data-view="training">璁粌璇︽儏</button>
+    <button class="tab active" data-view="overview" data-i18n="tab.overview">总览</button>
+    <button class="tab" data-view="health" data-i18n="tab.health_snapshot">健康快照</button>
+    <button class="tab" data-view="training" data-i18n="tab.training_detail">训练详情</button>
   </nav>
 
   <!-- ========== OVERVIEW TAB ========== -->
@@ -45,14 +45,14 @@
     <!-- Race Card + Motivation -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px" id="top-row">
       <div class="race-card" id="race-card-container">
-        <div class="race-name" id="race-name">璧涗簨鍔犺浇涓?..</div>
+        <div class="race-name" id="race-name">赛事加载中...</div>
         <div class="race-days" id="race-days">--</div>
         <div class="race-info" id="race-info"></div>
       </div>
       <div>
-        <div class="motivation" id="motivation">姣忎竴姝ラ兘绠楁暟銆?/div>
+        <div class="motivation" id="motivation">每一步都算数。</div>
         <div class="status-card" id="recovery-card" style="margin-top:8px">
-          <div class="card-label">鎭㈠鎸囨暟</div>
+          <div class="card-label" data-i18n="recovery.index">恢复指数</div>
           <div style="display:flex;align-items:baseline;gap:8px;margin-top:6px">
             <span id="recovery-pct" style="font-size:24px;font-weight:750">--</span>
             <span style="font-size:12px;color:var(--text-muted)">/100</span>
@@ -68,17 +68,17 @@
     <!-- Training Today -->
     <div class="section">
       <div class="section-head">
-        <div class="section-title">浠婃棩璁粌寤鸿</div>
+        <div class="section-title" data-i18n="training.today">今日训练建议</div>
         <div class="section-note" id="training-date"></div>
       </div>
-      <div class="insight-card" id="training-today">鍔犺浇涓?..</div>
+      <div class="insight-card" id="training-today">加载中...</div>
     </div>
 
     <!-- Insight -->
     <div class="section">
       <div class="section-head">
-        <div class="section-title">褰撳墠鍒ゆ柇</div>
-        <div class="section-note">鑷姩鍒嗘瀽</div>
+        <div class="section-title" data-i18n="insight.title">当前判断</div>
+        <div class="section-note" data-i18n="insight.auto">自动分析</div>
       </div>
       <div class="note" id="insight">--</div>
     </div>
@@ -86,8 +86,8 @@
     <!-- Training This Week -->
     <div class="section">
       <div class="section-head">
-        <div class="section-title">鏈懆璁粌</div>
-        <div class="section-note">婵€鍔辫 路 杩愬姩鍗＄墖</div>
+        <div class="section-title" data-i18n="week.title">本周训练</div>
+        <div class="section-note" data-i18n="week.motto">激励语 · 运动卡片</div>
       </div>
       <div class="status-grid" id="weekly-cards"></div>
       <div style="margin-top:12px">
@@ -105,22 +105,22 @@
   <section class="view" id="training" hidden>
     <div class="section" style="margin-top:0">
       <div class="section-head">
-        <div class="section-title">鏈堝害璁粌姹囨€?/div>
+        <div class="section-title" data-i18n="training.monthly">月度训练汇总</div>
         <div class="section-note" id="month-count"></div>
       </div>
       <div class="list" style="overflow-x:auto" id="monthly-groups"></div>
     </div>
     <div class="section">
       <div class="section-head">
-        <div class="section-title">鏈€杩戣窇姝?/div>
-        <div class="section-note">鏈€鏂拌褰?/div>
+        <div class="section-title" data-i18n="training.recent">最近跑步</div>
+        <div class="section-note" data-i18n="training.recent_note">最新记录</div>
       </div>
       <div class="list" id="recent-list"></div>
     </div>
     <div class="section">
       <div class="section-head">
-        <div class="section-title">鍏抽敭寮鸿</div>
-        <div class="section-note">鎸夎缁冭礋鑽锋帓搴?/div>
+        <div class="section-title" data-i18n="training.hard">关键强课</div>
+        <div class="section-note" data-i18n="training.hard_note">按训练负荷排序</div>
       </div>
       <div class="list" id="hard-list"></div>
     </div>
@@ -131,7 +131,7 @@
 <div class="modal-overlay" id="modal">
   <div class="modal-box">
     <div class="modal-header">
-      <h3 id="modal-title">娲诲姩璇︽儏</h3>
+      <h3 id="modal-title" data-i18n="modal.title">活动详情</h3>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <div class="modal-body" id="modal-body"></div>
@@ -151,9 +151,9 @@ const $ = (id) => document.getElementById(id);
 
 // Motivations
 const motivations = [
-  "姣忎竴姝ラ兘绠楁暟銆?, "浠婂ぉ涓嶆兂璺戯紝鎵€浠ユ墠鍘昏窇銆?, "娌℃湁鐧借窇鐨勬锛屾瘡涓€姝ラ兘浣滄暟銆?,
-  "璺戞鏁欎細鎴戠殑鏄細鍐嶅潥鎸佷竴涓嬨€?, "鎱㈠氨鏄揩锛屽皯灏辨槸澶氥€?, "浠婂ぉ鐨勬睏姘存槸鏄庡ぉ鐨勫媼绔犮€?,
-  "璺戣捣鏉ワ紝椋庝細鎷ユ姳浣犮€?, "涓嶇敤璺戣耽鍒汉锛岃窇璧㈡槰澶╃殑鑷繁銆?,
+  "每一步都算数。", "今天不想跑，所以才去跑。", "没有白跑的步，每一步都作数。",
+  "跑步教会我的是：再坚持一下。", "慢就是快，少就是多。", "今天的汗水是明天的勋章。",
+  "跑起来，风会拥抱你。", "不用跑赢别人，跑赢昨天的自己。",
 ];
 
 // ===== VIEW SWITCHING =====
@@ -174,31 +174,31 @@ document.querySelectorAll("#main-tabs .tab").forEach(t =>
 // ===== MODAL (10 Layers) =====
 function openModal(activity) {
   const d = activity;
-  $("modal-title").textContent = d.name || "娲诲姩璇︽儏";
+  $("modal-title").textContent = d.name || "活动详情";
 
   // Layer 1: Header info
   let html = `<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-    <div style="font-size:28px">${d.type === "Ride" ? "馃毚" : "馃弮"}</div>
+    <div style="font-size:28px">${d.type === "Ride" ? "🚴" : "🏃"}</div>
     <div>
-      <div style="font-weight:700;font-size:15px">${d.name || "鏈懡鍚?}</div>
-      <div style="color:var(--text-muted);font-size:12px">${d.date || ""} 路 ${d.type || "Run"}</div>
+      <div style="font-weight:700;font-size:15px">${d.name || "未命名"}</div>
+      <div style="color:var(--text-muted);font-size:12px">${d.date || ""} · ${d.type || "Run"}</div>
     </div>
   </div>`;
 
   // Layer 2: 6 metrics
   html += `<div class="modal-metrics">
-    <div class="modal-metric"><div class="val">${fmt.format(d.distance_km)}</div><div class="lbl">璺濈 km</div></div>
-    <div class="modal-metric"><div class="val">${fmt.format(d.moving_min)}</div><div class="lbl">鏃堕暱 min</div></div>
-    <div class="modal-metric"><div class="val">${d.avg_hr || "--"}</div><div class="lbl">蹇冪巼 bpm</div></div>
-    <div class="modal-metric"><div class="val">${d.avg_pace ? fmt.format(d.avg_pace) : "--"}</div><div class="lbl">閰嶉€?/km</div></div>
-    <div class="modal-metric"><div class="val">${fmt0.format(d.load || 0)}</div><div class="lbl">璁粌璐熻嵎</div></div>
+    <div class="modal-metric"><div class="val">${fmt.format(d.distance_km)}</div><div class="lbl">距离 km</div></div>
+    <div class="modal-metric"><div class="val">${fmt.format(d.moving_min)}</div><div class="lbl">时长 min</div></div>
+    <div class="modal-metric"><div class="val">${d.avg_hr || "--"}</div><div class="lbl">心率 bpm</div></div>
+    <div class="modal-metric"><div class="val">${d.avg_pace ? fmt.format(d.avg_pace) : "--"}</div><div class="lbl">配速 /km</div></div>
+    <div class="modal-metric"><div class="val">${fmt0.format(d.load || 0)}</div><div class="lbl">训练负荷</div></div>
     <div class="modal-metric"><div class="val">${d.vo2max ? fmt0.format(d.vo2max) : "--"}</div><div class="lbl">VO2max</div></div>
   </div>`;
 
   // Layer 3: Route Map (if route data available)
   if (d.route_coords && d.route_coords.length) {
     html += `<div class="modal-layer">
-      <h4><span class="layer-icon" style="background:var(--accent)">馃搷</span>璺嚎鍦板浘</h4>
+      <h4><span class="layer-icon" style="background:var(--accent)">📍</span>路线地图</h4>
       <div class="route-map" id="route-map-container"></div>
     </div>`;
   }
@@ -207,10 +207,10 @@ function openModal(activity) {
   if (d.hr_zones && Object.keys(d.hr_zones).length) {
     const zones = d.hr_zones;
     const total = Object.values(zones).reduce((s, v) => s + v, 0) || 1;
-    const zoneLabels = { "Z1": "鎭㈠", "Z2": "鏈夋哀", "Z3": "鑺傚", "Z4": "闃堝€?, "Z5": "鏃犳哀" };
+    const zoneLabels = { "Z1": "恢复", "Z2": "有氧", "Z3": "节奏", "Z4": "阈值", "Z5": "无氧" };
     const zoneColors = { "Z1": "#16a34a", "Z2": "#3b82f6", "Z3": "#ca8a04", "Z4": "#f97316", "Z5": "#ef4444" };
     html += `<div class="modal-layer">
-      <h4><span class="layer-icon" style="background:var(--red)">鈾?/span>蹇冪巼鍖洪棿</h4>
+      <h4><span class="layer-icon" style="background:var(--red)">♥</span>心率区间</h4>
       <div class="hr-zone-bar">`;
     Object.entries(zones).forEach(([z, v]) => {
       const pct = (v / total * 100).toFixed(1);
@@ -227,27 +227,27 @@ function openModal(activity) {
   // Layer 5: Running Dynamics (Run only)
   if (d.type === "Run" && (d.cadence || d.stride_length || d.gct)) {
     html += `<div class="modal-layer">
-      <h4><span class="layer-icon" style="background:var(--blue)">馃搻</span>璺戞鍔ㄦ€?/h4>
+      <h4><span class="layer-icon" style="background:var(--blue)">📐</span>跑步动态</h4>
       <div class="dynamics-grid">
-        <div class="dynamic-item"><div class="dv">${d.cadence ? fmt0.format(d.cadence * 2) : "--"}</div><div class="dl">姝ラ spm</div></div>
-        <div class="dynamic-item"><div class="dv">${d.stride_length ? fmt.format(d.stride_length) : "--"}</div><div class="dl">姝ュ箙 cm</div></div>
-        <div class="dynamic-item"><div class="dv">${d.gct ? fmt0.format(d.gct) : "--"}</div><div class="dl">瑙﹀湴 ms</div></div>
-        <div class="dynamic-item"><div class="dv">${d.lr_balance != null ? fmt.format(d.lr_balance) : "--"}</div><div class="dl">宸﹀彸骞宠　 %</div></div>
-        <div class="dynamic-item"><div class="dv">${d.vertical_osc ? fmt.format(d.vertical_osc) : "--"}</div><div class="dl">鍨傜洿鎸箙 cm</div></div>
-        <div class="dynamic-item"><div class="dv">${d.vertical_ratio ? fmt.format(d.vertical_ratio) : "--"}</div><div class="dl">鍨傜洿姣旂巼 %</div></div>
+        <div class="dynamic-item"><div class="dv">${d.cadence ? fmt0.format(d.cadence * 2) : "--"}</div><div class="dl">步频 spm</div></div>
+        <div class="dynamic-item"><div class="dv">${d.stride_length ? fmt.format(d.stride_length) : "--"}</div><div class="dl">步幅 cm</div></div>
+        <div class="dynamic-item"><div class="dv">${d.gct ? fmt0.format(d.gct) : "--"}</div><div class="dl">触地 ms</div></div>
+        <div class="dynamic-item"><div class="dv">${d.lr_balance != null ? fmt.format(d.lr_balance) : "--"}</div><div class="dl">左右平衡 %</div></div>
+        <div class="dynamic-item"><div class="dv">${d.vertical_osc ? fmt.format(d.vertical_osc) : "--"}</div><div class="dl">垂直振幅 cm</div></div>
+        <div class="dynamic-item"><div class="dv">${d.vertical_ratio ? fmt.format(d.vertical_ratio) : "--"}</div><div class="dl">垂直比率 %</div></div>
       </div>
     </div>`;
   }
 
   // Layer 6: VO2max card (Run)
   if (d.type === "Run" && d.vo2max) {
-    const vo2Levels = ["鍏ラ棬", "涓€鑸?, "鑹ソ", "浼樼", "绮捐嫳"];
+    const vo2Levels = ["入门", "一般", "良好", "优秀", "精英"];
     const vo2Idx = d.vo2max > 55 ? 4 : d.vo2max > 50 ? 3 : d.vo2max > 45 ? 2 : d.vo2max > 40 ? 1 : 0;
     html += `<div class="modal-layer">
-      <h4><span class="layer-icon" style="background:var(--green)">馃挩</span>VO2max</h4>
+      <h4><span class="layer-icon" style="background:var(--green)">💨</span>VO2max</h4>
       <div style="text-align:center;padding:8px">
         <div style="font-size:36px;font-weight:800;color:var(--green)">${fmt0.format(d.vo2max)}</div>
-        <div style="color:var(--text-muted);font-size:12px">ml/kg/min 路 ${vo2Levels[vo2Idx]}姘村钩</div>
+        <div style="color:var(--text-muted);font-size:12px">ml/kg/min · ${vo2Levels[vo2Idx]}水平</div>
       </div>
     </div>`;
   }
@@ -255,11 +255,11 @@ function openModal(activity) {
   // Layer 7: Training Effect (Runalyze data if available)
   if (d.training_effect_aerobic != null || d.training_effect_anaerobic != null) {
     html += `<div class="modal-layer">
-      <h4><span class="layer-icon" style="background:var(--purple)">馃搳</span>璁粌鏁堟灉</h4>
+      <h4><span class="layer-icon" style="background:var(--purple)">📊</span>训练效果</h4>
       <div class="dynamics-grid">
-        <div class="dynamic-item"><div class="dv">${d.training_effect_aerobic != null ? fmt.format(d.training_effect_aerobic) : "--"}</div><div class="dl">鏈夋哀 TE</div></div>
-        <div class="dynamic-item"><div class="dv">${d.training_effect_anaerobic != null ? fmt.format(d.training_effect_anaerobic) : "--"}</div><div class="dl">鏃犳哀 TE</div></div>
-        <div class="dynamic-item"><div class="dv">${d.recovery_time_hr != null ? fmt.format(d.recovery_time_hr) : "--"}</div><div class="dl">鎭㈠鏃堕棿 h</div></div>
+        <div class="dynamic-item"><div class="dv">${d.training_effect_aerobic != null ? fmt.format(d.training_effect_aerobic) : "--"}</div><div class="dl">有氧 TE</div></div>
+        <div class="dynamic-item"><div class="dv">${d.training_effect_anaerobic != null ? fmt.format(d.training_effect_anaerobic) : "--"}</div><div class="dl">无氧 TE</div></div>
+        <div class="dynamic-item"><div class="dv">${d.recovery_time_hr != null ? fmt.format(d.recovery_time_hr) : "--"}</div><div class="dl">恢复时间 h</div></div>
       </div>
     </div>`;
   }
@@ -267,11 +267,11 @@ function openModal(activity) {
   // Layer 8: Weather
   if (d.weather_temp != null || d.weather_desc) {
     html += `<div class="modal-layer">
-      <h4><span class="layer-icon" style="background:var(--cyan)">馃尋</span>澶╂皵</h4>
+      <h4><span class="layer-icon" style="background:var(--cyan)">🌤</span>天气</h4>
       <div style="display:flex;gap:20px;font-size:13px;color:var(--text-secondary)">
-        <span>馃尅 ${d.weather_temp != null ? fmt.format(d.weather_temp) + '掳C' : '--'}</span>
-        <span>馃挧 ${d.weather_humidity != null ? fmt0.format(d.weather_humidity) + '%' : '--'}</span>
-        <span>馃尙 ${d.weather_wind != null ? fmt.format(d.weather_wind) + ' km/h' : '--'}</span>
+        <span>🌡 ${d.weather_temp != null ? fmt.format(d.weather_temp) + '°C' : '--'}</span>
+        <span>💧 ${d.weather_humidity != null ? fmt0.format(d.weather_humidity) + '%' : '--'}</span>
+        <span>🌬 ${d.weather_wind != null ? fmt.format(d.weather_wind) + ' km/h' : '--'}</span>
         <span>${d.weather_desc || ''}</span>
       </div>
     </div>`;
@@ -279,13 +279,13 @@ function openModal(activity) {
 
   // Layer 9: Pace/HR Mini Chart
   html += `<div class="modal-layer">
-    <h4><span class="layer-icon" style="background:var(--accent)">馃搱</span>閰嶉€?路 蹇冪巼</h4>
+    <h4><span class="layer-icon" style="background:var(--accent)">📈</span>配速 · 心率</h4>
     <div class="modal-chart"><canvas id="modalPaceChart" height="180"></canvas></div>
   </div>`;
 
   // Layer 10: AI Analysis
   html += `<div class="modal-layer">
-    <h4><span class="layer-icon" style="background:var(--purple)">馃</span>AI 鍒嗘瀽</h4>
+    <h4><span class="layer-icon" style="background:var(--purple)">🤖</span>AI 分析</h4>
     <div class="ai-analysis" id="modal-ai">${d.ai_analysis || generateAnalysis(d)}</div>
   </div>`;
 
@@ -305,22 +305,22 @@ function generateAnalysis(d) {
   const parts = [];
   if (d.avg_hr) {
     const hr = d.avg_hr;
-    if (hr < 130) parts.push("浣庡績鐜囪交鏉捐窇锛?);
-    else if (hr < 145) parts.push("涓瓑寮哄害鏈夋哀璺戯紝");
-    else if (hr < 160) parts.push("杈冮珮寮哄害鑺傚璺戯紝");
-    else parts.push("楂樺己搴﹁缁冿紝");
+if (hr < 130) parts.push("低心率轻松跑，");
+    else if (hr < 145) parts.push("中等强度有氧跑，");
+    else if (hr < 160) parts.push("较高强度节奏跑，");
+    else parts.push("高强度训练，");
   }
   if (d.distance_km) {
-    if (d.distance_km < 5) parts.push("鐭窛绂绘仮澶嶆垨閫熷害璁粌銆?);
-    else if (d.distance_km < 10) parts.push("涓窛绂诲熀纭€璁粌銆?);
-    else if (d.distance_km < 21) parts.push("闀胯窛绂昏€愬姏璁粌銆?);
-    else parts.push("瓒呴暱璺濈 LSD 璁粌銆?);
+if (d.distance_km < 5) parts.push("短距离恢复或速度训练。");
+else if (d.distance_km < 10) parts.push("中距离基础训练。");
+else if (d.distance_km < 21) parts.push("长距离耐力训练。");
+else parts.push("超长距离 LSD 训练。");
   }
   if (d.load) {
-    if (d.load > 120) parts.push(" 璁粌璐熻嵎杈冮珮锛屾敞鎰忔仮澶嶃€?);
-    else if (d.load < 30) parts.push(" 杞绘澗璁粌鏃ワ紝鎭㈠鑹ソ銆?);
+if (d.load > 120) parts.push(" 训练负荷较高，注意恢复。");
+else if (d.load < 30) parts.push(" 轻松训练日，恢复良好。");
   }
-  return parts.join("") || "鏆傛棤瓒冲鏁版嵁鐢熸垚鍒嗘瀽銆?;
+return parts.join("") || "暂无足够数据生成分析。";
 }
 
 function drawRouteMap(coords) {
@@ -337,12 +337,12 @@ function drawModalPaceChart(d) {
   const canvas = $("modalPaceChart");
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
-  const labels = d.pace_data ? d.pace_data.map((_, i) => `${i}km`) : ["璧?, "涓?, "鏈?];
+const labels = d.pace_data ? d.pace_data.map((_, i) => `${i}km`) : ["始", "中", "末"];
   const paceData = d.pace_data || (d.avg_pace ? [d.avg_pace * 0.95, d.avg_pace, d.avg_pace * 1.05] : []);
   const hrData = d.hr_data || (d.avg_hr ? [d.avg_hr - 5, d.avg_hr, d.avg_hr + 5] : []);
 
   if (!paceData.length && !hrData.length) {
-    canvas.parentElement.innerHTML = '<div style="color:var(--text-muted);font-size:12px;text-align:center;padding:20px">鏆傛棤鍒嗘鏁版嵁</div>';
+    canvas.parentElement.innerHTML = '<div style="color:var(--text-muted);font-size:12px;text-align:center;padding:20px">暂无分段数据</div>';
     return;
   }
 
@@ -352,7 +352,7 @@ function drawModalPaceChart(d) {
       labels,
       datasets: [
         {
-          label: "閰嶉€?/km",
+          label: "配速 /km",
           data: paceData,
           borderColor: "#f97316",
           backgroundColor: "transparent",
@@ -362,7 +362,7 @@ function drawModalPaceChart(d) {
           yAxisID: "y",
         },
         {
-          label: "蹇冪巼 bpm",
+          label: "心率 bpm",
           data: hrData,
           borderColor: "#ef4444",
           backgroundColor: "transparent",
@@ -416,8 +416,8 @@ function render(data) {
     v.hidden = v.id !== state.currentTab);
 
   const s = data.summary || {};
-  $("subtitle").textContent = data.cached ? "缂撳瓨鏁版嵁锛屽悗鍙板畾鏃跺埛鏂? : "宸叉媺鍙栨渶鏂版暟鎹?;
-  $("status").textContent = `鏇存柊浜?${new Date(data.generated_at).toLocaleString("zh-CN")}`;
+  $("subtitle").textContent = data.cached ? "缓存数据，后台定时刷新 : "已拉取最新数据;
+  $("status").textContent = `更新于${new Date(data.generated_at).toLocaleString("zh-CN")}`;
   $("motivation").textContent = motivations[Math.floor(Math.random() * motivations.length)];
 
   renderRaceCard(data.race);
@@ -433,12 +433,12 @@ function render(data) {
 function renderRaceCard(race) {
   if (race && race.name) {
     $("race-name").textContent = race.name;
-    $("race-days").textContent = race.days_left != null ? `${race.days_left} 澶ー : "--";
-    $("race-info").textContent = `${race.date || ""} 路 ${race.distance || ""} 路 ${race.location || ""}`;
+    $("race-days").textContent = race.days_left != null ? `${race.days_left} 天` : "--";
+    $("race-info").textContent = `${race.date || ""} · ${race.distance || ""} · ${race.location || ""}`;
   } else {
-    $("race-name").textContent = "涓嬩竴鍦烘瘮璧?;
-    $("race-days").textContent = "寰呭畾";
-    $("race-info").textContent = "閰嶇疆姣旇禌淇℃伅鍚庡彲鏄剧ず鍊掕鏃?;
+    $("race-name").textContent = "下一场比赛;
+    $("race-days").textContent = "待定";
+    $("race-info").textContent = "配置比赛信息后可显示倒计时;
   }
 }
 
@@ -456,14 +456,14 @@ function renderRecovery(s) {
 // ===== STATUS CARDS =====
 function renderStatusCards(s) {
   const cards = [
-    { label: "涓夊勾鎬昏窇閲?, value: `${fmt.format(s.distance_km)} km`, sub: `${s.first_run || ""} 寮€濮媊, accent: "card-accent-orange" },
-    { label: "璺戞娆℃暟", value: fmt0.format(s.activity_count), sub: "涓夊勾绱", accent: "card-accent-blue" },
-    { label: "骞冲潎姣忓懆", value: `${fmt.format(s.weekly_km)} km`, sub: "km / 鍛?, accent: "card-accent-green" },
-    { label: "璁粌璐熻嵎", value: fmt0.format(s.training_load), sub: "涓夊勾绱 TL", accent: "card-accent-purple" },
-    { label: "骞冲潎蹇冪巼", value: s.avg_hr ? `${fmt.format(s.avg_hr)} bpm` : "--", sub: "鍏ㄩ儴娲诲姩鍧囧€?, accent: "card-accent-red" },
-    { label: "骞冲潎閰嶉€?, value: s.avg_pace ? fmt.format(s.avg_pace) : "--", sub: "/km", accent: "card-accent-cyan" },
-    { label: "鎬绘椂闀?, value: s.total_hours ? `${fmt0.format(s.total_hours)} h` : "--", sub: "涓夊勾绱", accent: "card-accent-orange" },
-    { label: "鏈€楂樻湀", value: s.peak_month_km ? `${fmt.format(s.peak_month_km)} km` : "--", sub: s.peak_month || "", accent: "card-accent-green" },
+    { label: "三年总跑量, value: `${fmt.format(s.distance_km)} km`, sub: `${s.first_run || ""} 开始`, accent: "card-accent-orange" },
+    { label: "跑步次数", value: fmt0.format(s.activity_count), sub: "三年累计", accent: "card-accent-blue" },
+    { label: "平均每周", value: `${fmt.format(s.weekly_km)} km`, sub: "km / 周, accent: "card-accent-green" },
+    { label: "训练负荷", value: fmt0.format(s.training_load), sub: "三年累计 TL", accent: "card-accent-purple" },
+    { label: "平均心率", value: s.avg_hr ? `${fmt.format(s.avg_hr)} bpm` : "--", sub: "全部活动均值, accent: "card-accent-red" },
+    { label: "平均配速, value: s.avg_pace ? fmt.format(s.avg_pace) : "--", sub: "/km", accent: "card-accent-cyan" },
+    { label: "总时长, value: s.total_hours ? `${fmt0.format(s.total_hours)} h` : "--", sub: "三年累计", accent: "card-accent-orange" },
+    { label: "最高月", value: s.peak_month_km ? `${fmt.format(s.peak_month_km)} km` : "--", sub: s.peak_month || "", accent: "card-accent-green" },
   ];
   $("status-cards").innerHTML = cards.map(c => `
     <div class="status-card ${c.accent}">
@@ -477,21 +477,21 @@ function renderStatusCards(s) {
 // ===== INSIGHT =====
 function renderInsight(s, monthRows) {
   if (!monthRows || !monthRows.length) {
-    $("insight").textContent = "杩樻病鏈夎冻澶熺殑璺戞鏁版嵁鐢熸垚鍒ゆ柇銆?;
+    $("insight").textContent = "还没有足够的跑步数据生成判断。;
     return;
   }
   const peak = [...monthRows].sort((a, b) => b.load - a.load)[0];
   $("insight").textContent =
-    `杩囧幓涓夊勾绱 ${fmt.format(s.distance_km)} km锛屽叡 ${fmt0.format(s.activity_count)} 娆¤窇姝ワ紝` +
-    `骞冲潎姣忓懆 ${fmt.format(s.weekly_km)} km銆傚嘲鍊兼湀浠?${peak.period}锛宍 +
-    `鍗曟湀 ${fmt.format(peak.dist)} km锛岃缁冭礋鑽?${fmt0.format(peak.load)}銆俙 +
-    (s.avg_hr ? ` 骞冲潎蹇冪巼 ${fmt.format(s.avg_hr)} bpm銆俙 : "");
+    `过去三年累计 ${fmt.format(s.distance_km)} km，共 ${fmt0.format(s.activity_count)} 次跑步，` +
+    `平均每周 ${fmt.format(s.weekly_km)} km。峰值月份${peak.period}，` +
+    `单月 ${fmt.format(peak.dist)} km，训练负荷${fmt0.format(peak.load)}。` +
+    (s.avg_hr ? ` 平均心率 ${fmt.format(s.avg_hr)} bpm。` : "");
 }
 
 // ===== WEEKLY =====
 function renderWeeklyCards(s, runs) {
   if (!runs || !runs.length) {
-    $("weekly-cards").innerHTML = '<div class="note">鏈懆鏆傛棤璺戞璁板綍</div>';
+    $("weekly-cards").innerHTML = '<div class="note">本周暂无跑步记录</div>';
     return;
   }
   const now = new Date();
@@ -502,10 +502,10 @@ function renderWeeklyCards(s, runs) {
   const weekLoad = weekRuns.reduce((sum, r) => sum + (r.load || 0), 0);
 
   const cards = [
-    { label: "鏈懆璺戦噺", value: `${fmt.format(weekDist)} km`, sub: `${weekRuns.length} 娆 },
-    { label: "鏈懆鏃堕暱", value: `${fmt0.format(weekTime)} min`, sub: `${fmt.format(weekTime / 60)} h` },
-    { label: "鏈懆璐熻嵎", value: fmt0.format(weekLoad), sub: "TL" },
-    { label: "鍛ㄥ潎閫熷害", value: weekTime > 0 ? fmt.format(weekDist / (weekTime / 60)) : "--", sub: "km/h" },
+    { label: "本周跑量", value: `${fmt.format(weekDist)} km`, sub: `${weekRuns.length} 次` },
+    { label: "本周时长", value: `${fmt0.format(weekTime)} min`, sub: `${fmt.format(weekTime / 60)} h` },
+    { label: "本周负荷", value: fmt0.format(weekLoad), sub: "TL" },
+    { label: "周均速度", value: weekTime > 0 ? fmt.format(weekDist / (weekTime / 60)) : "--", sub: "km/h" },
   ];
   $("weekly-cards").innerHTML = cards.map(c => `
     <div class="status-card">
@@ -518,20 +518,20 @@ function renderWeeklyCards(s, runs) {
 
 function renderWeekActivities(runs) {
   if (!runs || !runs.length) {
-    $("week-activities").innerHTML = '<div style="padding:16px;color:var(--text-muted)">鏆傛棤鏈€杩戞椿鍔?/div>';
+    $("week-activities").innerHTML = '<div style="padding:16px;color:var(--text-muted)">暂无最近活动</div>';
     return;
   }
   const now = new Date();
   const weekRuns = runs.filter(r => new Date(r.date) >= new Date(now - 7 * 86400000)).slice(0, 10);
   if (!weekRuns.length) {
-    $("week-activities").innerHTML = '<div style="padding:16px;color:var(--text-muted)">鏈懆鏆傛棤璺戞璁板綍</div>';
+    $("week-activities").innerHTML = '<div style="padding:16px;color:var(--text-muted)">本周暂无跑步记录</div>';
     return;
   }
   $("week-activities").innerHTML = weekRuns.map(r => `
     <div class="row" onclick='openModal(${JSON.stringify(r)})'>
       <div>
-        <div class="row-title">${r.name || "鏈懡鍚?}</div>
-        <div class="row-meta">${r.date} 路 ${fmt.format(r.distance_km)} km 路 ${fmt.format(r.moving_min)} min 路 ${r.avg_hr || "--"} bpm</div>
+        <div class="row-title">${r.name || "未命名"}</div>
+        <div class="row-meta">${r.date} · ${fmt.format(r.distance_km)} km · ${fmt.format(r.moving_min)} min · ${r.avg_hr || "--"} bpm</div>
       </div>
       <div class="row-score">${r.load ? fmt0.format(r.load) : "--"}</div>
     </div>
@@ -543,7 +543,7 @@ function renderTrainingToday(tt) {
     $("training-today").innerHTML = tt.content;
     $("training-date").textContent = tt.date || "";
   } else {
-    $("training-today").innerHTML = "浠婃棩璁粌寤鸿灏嗛€氳繃 /training_today.html 寮傛鍔犺浇銆?;
+    $("training-today").innerHTML = "今日训练建议将通过 /training_today.html 异步加载。;
   }
 }
 
@@ -555,27 +555,27 @@ function renderHealthCharts() {
 
   if (data.month_rows && data.month_rows.length) {
     html += `<div class="chart-panel">
-      <div class="section-title" style="margin-bottom:8px">鏈堝害璺戦噺 & 璁粌璐熻嵎</div>
+      <div class="section-title" style="margin-bottom:8px">月度跑量 & 训练负荷</div>
       <canvas id="monthlyDistChart" height="260"></canvas>
       <div class="legend">
-        <span><i class="swatch" style="background:var(--accent)"></i>璺戦噺 (km)</span>
-        <span><i class="swatch" style="background:var(--purple)"></i>璁粌璐熻嵎</span>
+        <span><i class="swatch" style="background:var(--accent)"></i>跑量 (km)</span>
+        <span><i class="swatch" style="background:var(--purple)"></i>训练负荷</span>
       </div>
     </div>`;
   }
   if (data.hr_bins) {
     html += `<div class="chart-panel">
-      <div class="section-title" style="margin-bottom:8px">蹇冪巼鍖洪棿鍒嗗竷</div>
+      <div class="section-title" style="margin-bottom:8px">心率区间分布</div>
       <canvas id="hrBinsChart" height="220"></canvas>
     </div>`;
   }
   if (data.year_rows && data.year_rows.length) {
     html += `<div class="chart-panel">
-      <div class="section-title" style="margin-bottom:8px">骞村害姹囨€?/div>
+      <div class="section-title" style="margin-bottom:8px">年度汇总</div>
       <canvas id="yearChart" height="220"></canvas>
     </div>`;
   }
-  $("health-charts").innerHTML = html || '<div class="note">鏆傛棤鍋ュ悍鏁版嵁鍥捐〃</div>';
+  $("health-charts").innerHTML = html || '<div class="note">暂无健康数据图表</div>';
 
   if (data.month_rows) drawMonthlyDistChart(data.month_rows);
   if (data.hr_bins) drawHRBinsChart(data.hr_bins);
@@ -591,8 +591,8 @@ function drawMonthlyDistChart(rows) {
     data: {
       labels: recent.map(r => r.period.slice(2).replace("-", ".")),
       datasets: [
-        { label: "璺戦噺", data: recent.map(r => r.dist), backgroundColor: "rgba(249,115,22,0.5)", borderColor: "#f97316", borderWidth: 1, borderRadius: 4, yAxisID: "y" },
-        { label: "璐熻嵎", data: recent.map(r => r.load), type: "line", borderColor: "#8b5cf6", borderWidth: 2, pointRadius: 2, tension: 0.3, yAxisID: "y1" }
+        { label: "跑量", data: recent.map(r => r.dist), backgroundColor: "rgba(249,115,22,0.5)", borderColor: "#f97316", borderWidth: 1, borderRadius: 4, yAxisID: "y" },
+        { label: "负荷", data: recent.map(r => r.load), type: "line", borderColor: "#8b5cf6", borderWidth: 2, pointRadius: 2, tension: 0.3, yAxisID: "y1" }
       ]
     },
     options: {
@@ -635,8 +635,8 @@ function drawYearChart(rows) {
     data: {
       labels: rows.map(r => r.period),
       datasets: [
-        { label: "璺戦噺 km", data: rows.map(r => r.dist), backgroundColor: "rgba(249,115,22,0.5)", borderColor: "#f97316", borderWidth: 1, borderRadius: 6, yAxisID: "y" },
-        { label: "璁粌璐熻嵎", data: rows.map(r => r.load), type: "line", borderColor: "#8b5cf6", borderWidth: 2.5, pointRadius: 3, tension: 0.2, yAxisID: "y1" }
+        { label: "跑量 km", data: rows.map(r => r.dist), backgroundColor: "rgba(249,115,22,0.5)", borderColor: "#f97316", borderWidth: 1, borderRadius: 6, yAxisID: "y" },
+        { label: "训练负荷", data: rows.map(r => r.load), type: "line", borderColor: "#8b5cf6", borderWidth: 2.5, pointRadius: 3, tension: 0.2, yAxisID: "y1" }
       ]
     },
     options: {
@@ -657,20 +657,20 @@ function renderTrainingTab() {
   if (!data) return;
 
   if (data.month_rows && data.month_rows.length) {
-    $("month-count").textContent = `${data.month_rows.length} 涓湀`;
+    $("month-count").textContent = `${data.month_rows.length} 个月`;
     const reversed = [...data.month_rows].reverse();
     $("monthly-groups").innerHTML = reversed.map((r, i) => `
       <div class="month-group ${i === 0 ? 'open' : ''}">
         <div class="month-group-header" onclick="this.parentElement.classList.toggle('open')">
           <span class="mgh-label">${r.period}</span>
-          <span class="mgh-value">${fmt.format(r.dist)} km 路 璐熻嵎 ${fmt0.format(r.load || 0)}</span>
+          <span class="mgh-value">${fmt.format(r.dist)} km · 负荷 ${fmt0.format(r.load || 0)}</span>
         </div>
         <div class="month-group-body">
           <table class="month-detail-table">
             <thead><tr>
-              <th>娲诲姩</th><th>璺濈 km</th><th>鏃堕暱 min</th><th>璐熻嵎</th><th>鍧囧績</th>
-              <th>鍧囬€?/th><th>鐖崌 m</th><th>鍗¤矾閲?/th><th>鍧囨棰?/th><th>鍧囧姛鐜?/th>
-              <th>IF</th><th>TSS</th><th>CTL</th><th>ATL</th><th>TSB</th><th>澶囨敞</th>
+              <th>活动</th><th>距离 km</th><th>时长 min</th><th>负荷</th><th>均心</th>
+              <th>均速</th><th>爬升 m</th><th>卡路里</th><th>均步频</th><th>均功率</th>
+              <th>IF</th><th>TSS</th><th>CTL</th><th>ATL</th><th>TSB</th><th>备注</th>
             </tr></thead>
             <tbody>
               ${r.activities && r.activities.length ? r.activities.map(a => `
@@ -692,7 +692,7 @@ function renderTrainingTab() {
                   <td>${a.tsb != null ? fmt0.format(a.tsb) : "--"}</td>
                   <td style="font-size:10px;color:var(--text-muted)">${a.notes || a.type || ""}</td>
                 </tr>
-              `).join("") : `<tr><td colspan="16" style="text-align:center;color:var(--text-muted);padding:12px">${r.runs || 0} 娆¤窇姝ワ紝璇︽儏寰呭姞杞?/td></tr>`}
+              `).join("") : `<tr><td colspan="16" style="text-align:center;color:var(--text-muted);padding:12px">${r.runs || 0} 次跑步，详情待加载</td></tr>`}
             </tbody>
           </table>
         </div>
@@ -704,10 +704,10 @@ function renderTrainingTab() {
     $("recent-list").innerHTML = data.recent_runs.slice(0, 15).map(r => `
       <div class="row" onclick='openModal(${JSON.stringify(r)})'>
         <div>
-          <div class="row-title">${r.name || "鏈懡鍚?}</div>
-          <div class="row-meta">${r.date} 路 ${fmt.format(r.distance_km)} km 路 ${fmt.format(r.moving_min)} min 路 ${r.avg_hr || "--"} bpm</div>
+          <div class="row-title">${r.name || "未命名"}</div>
+          <div class="row-meta">${r.date} · ${fmt.format(r.distance_km)} km · ${fmt.format(r.moving_min)} min · ${r.avg_hr || "--"} bpm</div>
         </div>
-        <div class="row-score">璐熻嵎 ${r.load ? fmt0.format(r.load) : "--"}</div>
+        <div class="row-score">负荷 ${r.load ? fmt0.format(r.load) : "--"}</div>
       </div>
     `).join("");
   }
@@ -716,8 +716,8 @@ function renderTrainingTab() {
     $("hard-list").innerHTML = data.top_by_load.slice(0, 10).map(r => `
       <div class="row" onclick='openModal(${JSON.stringify(r)})'>
         <div>
-          <div class="row-title">${r.name || "鏈懡鍚?}</div>
-          <div class="row-meta">${r.date} 路 ${fmt.format(r.distance_km)} km 路 ${fmt.format(r.moving_min)} min</div>
+          <div class="row-title">${r.name || "未命名"}</div>
+          <div class="row-meta">${r.date} · ${fmt.format(r.distance_km)} km · ${fmt.format(r.moving_min)} min</div>
         </div>
         <div class="row-score">TL ${r.load ? fmt0.format(r.load) : "--"}</div>
       </div>
@@ -728,7 +728,7 @@ function renderTrainingTab() {
 // ===== DATA LOADING =====
 async function loadData(force = false) {
   $("error").style.display = "none";
-  $("status").textContent = force ? "姝ｅ湪鎵嬪姩鍒锋柊..." : "姝ｅ湪鏇存柊鏁版嵁...";
+  $("status").textContent = force ? "正在手动刷新..." : "正在更新数据...";
   try {
     const resp = await fetch(`/api/data${force ? "?refresh=1" : ""}`, { cache: "no-store" });
     if (!resp.ok) {
@@ -741,7 +741,7 @@ async function loadData(force = false) {
     renderTrainingTab();
   } catch (err) {
     $("loading").style.display = state.data ? "none" : "grid";
-    $("status").textContent = "鏇存柊澶辫触";
+    $("status").textContent = "更新失败";
     $("error").textContent = err.message;
     $("error").style.display = "block";
   }
