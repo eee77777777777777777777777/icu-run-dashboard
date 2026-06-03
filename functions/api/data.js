@@ -1,4 +1,4 @@
-// Cloudflare Pages Function: /api/data
+﻿// Cloudflare Pages Function: /api/data
 export async function onRequest(context) {
   const { request, env } = context;
   const url = new URL(request.url);
@@ -43,8 +43,8 @@ async function fetchIntervalsData(env) {
   const auth = btoa("API_KEY:" + apiKey);
 
   const [wellnessResp, activitiesResp] = await Promise.all([
-    fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/wellness?oldest=2023-01-01`, { headers: { Authorization: `Basic ${auth}` } }),
-    fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/activities?limit=200&oldest=2023-01-01`, { headers: { Authorization: `Basic ${auth}` } })
+    fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/wellness?oldest=2020-01-01`, { headers: { Authorization: `Basic ${auth}` } }),
+    fetch(`https://intervals.icu/api/v1/athlete/${athleteId}/activities?limit=5000&oldest=2020-01-01`, { headers: { Authorization: `Basic ${auth}` } })
   ]);
 
   if (!wellnessResp.ok) throw new Error(`Wellness API: ${wellnessResp.status}`);
@@ -138,3 +138,4 @@ function getStaticData() {
     month_rows: [], year_rows: [], hr_bins: { "<130": 0, "130-145": 0, "145-155": 0, "155+": 0 }, recent_runs: [], top_by_load: []
   };
 }
+
