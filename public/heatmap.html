@@ -625,12 +625,12 @@ var currentPopup = null;
 function showPopup(props, lngLat) {
   if (currentPopup) currentPopup.remove();
 
-  var distKm = parseDistance(props.name);
-  var pace = parsePace(props.name);
-  var hr = parseHR(props.name);
+  var distKm = parseDistance(fixEncoding(props.name));
+  var pace = parsePace(fixEncoding(props.name));
+  var hr = parseHR(fixEncoding(props.name));
 
   var html = '<div class="popup-content">';
-  html += '<strong>' + escapeHtml(props.name || "未命名") + '</strong>';
+  html += '<strong>' + escapeHtml(fixEncoding(props.name) || "未命名") + '</strong>';
   html += '<div style="color:var(--text-muted, #94a3b8);font-size:12px">' + (props.type || "") + ' · ' + (props.date || "") + '</div>';
   if (distKm) html += '<div>距离: ' + distKm + ' km</div>';
   if (pace) html += '<div>配速: ' + pace + '</div>';
@@ -662,7 +662,7 @@ function renderActivityList() {
     html += '<div class="activity-item' + active + '" data-id="' + p.id + '">';
     html += '<div class="act-icon ' + (p.type || "Run") + '">' + icon + '</div>';
     html += '<div class="act-info">';
-    html += '<div class="act-name">' + escapeHtml(p.name || "未命名") + '</div>';
+    html += '<div class="act-name">' + escapeHtml(fixEncoding(p.name) || "未命名") + '</div>';
     html += '<div class="act-meta">' + (p.date || "") + (dist ? " · " + dist + " km" : "") + '</div>';
     html += '</div></div>';
   });
@@ -693,6 +693,23 @@ function renderActivityList() {
 function highlightActivity(id) {
   state.selectedId = id;
   map.setFilter("tracks-line-highlight", id ? ["==", ["get", "id"], id] : null);
+}
+
+
+// Fix double-encoded Chinese text (GBK mojibake)
+function fixEncoding(str) {
+  if (!str) return "";
+  if (!/[\u00c0-\u00ff]/.test(str)) return str;
+  try {
+    var bytes = new Uint8Array(str.length);
+    for (var i = 0; i < str.length; i++) {
+      var c = str.charCodeAt(i);
+      bytes[i] = c < 256 ? c : 0x3F;
+    }
+    return new TextDecoder("gbk").decode(bytes);
+  } catch(e) {
+    return str;
+  }
 }
 
 // ===== HELPERS =====
