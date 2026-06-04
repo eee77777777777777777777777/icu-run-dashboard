@@ -107,6 +107,23 @@ function epsilonForZoom(zoom) {
   return 0.002;                       // overview
 }
 
+
+// Fix double-encoded Chinese names (UTF-8 bytes decoded as GBK)
+function fixEncoding(str) {
+  if (!str) return "";
+  try {
+    // The garbled text is: UTF-8 bytes interpreted as GBK then re-encoded as UTF-8
+    // Fix: encode to latin1 (recovers the GBK bytes), then decode as GBK
+    const bytes = new Uint8Array(str.length);
+    for (let i = 0; i < str.length; i++) {
+      bytes[i] = str.charCodeAt(i) & 0xFF;
+    }
+    return new TextDecoder("gbk").decode(bytes);
+  } catch(e) {
+    return str;
+  }
+}
+
 // Build GeoJSON FeatureCollection from activities
 function buildGeoJSON(activities, { zoom, type, year, month }) {
   const epsilon = epsilonForZoom(zoom);
@@ -138,7 +155,7 @@ function buildGeoJSON(activities, { zoom, type, year, month }) {
       geometry,
       properties: {
         id: act.id,
-        name: act.name || "",
+        name: fixEncoding(act.name || ""),
         type: act.type || "Run",
         date: act.date || "",
         point_count: coords.length,
