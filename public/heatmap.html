@@ -326,7 +326,7 @@ var map = new maplibregl.Map({
     ]
   },
   center: [104, 36],
-  zoom: 3,
+  zoom: 5,
   renderWorldCopies: false
 });
 
@@ -347,14 +347,29 @@ map.on("load", function() {
   });
 
   map.addLayer({
+    id: "tracks-glow",
+    type: "line",
+    source: "tracks",
+    paint: {
+      "line-width": ["interpolate", ["linear"], ["zoom"], 3, 6, 6, 12, 10, 20, 14, 28],
+      "line-opacity": ["interpolate", ["linear"], ["zoom"], 3, 0.15, 7, 0.12, 10, 0.08, 14, 0.05],
+      "line-blur": ["interpolate", ["linear"], ["zoom"], 3, 4, 7, 6, 10, 8],
+      "line-color": ["match", ["get", "type"], "Run", "#f97316", "VirtualRun", "#f97316", "Ride", "#3b82f6", "VirtualRide", "#3b82f6", "Swim", "#16a34a", "#8b5cf6"],
+      "line-cap": "round",
+      "line-join": "round"
+    }
+  });
+
+  map.addLayer({
     id: "tracks-line",
     type: "line",
     source: "tracks",
     paint: {
       "line-color": ["match", ["get", "type"], "Run", "#f97316", "VirtualRun", "#f97316", "Ride", "#3b82f6", "VirtualRide", "#3b82f6", "Swim", "#16a34a", "#8b5cf6"],
-      "line-width": ["interpolate", ["linear"], ["zoom"], 4, 1.5, 7, 2.5, 10, 4, 13, 5],
-      "line-opacity": ["interpolate", ["linear"], ["zoom"], 4, 0.55, 7, 0.7, 10, 0.85, 14, 0.9],
+      "line-width": ["interpolate", ["linear"], ["zoom"], 3, 2, 6, 4, 10, 6, 14, 8],
+      "line-opacity": ["interpolate", ["linear"], ["zoom"], 3, 0.7, 7, 0.8, 10, 0.9, 14, 1],
       "line-blur": 0,
+      "line-color": ["match", ["get", "type"], "Run", "#f97316", "VirtualRun", "#f97316", "Ride", "#3b82f6", "VirtualRide", "#3b82f6", "Swim", "#16a34a", "#8b5cf6"]
       "line-cap": "round",
       "line-join": "round"
     }
@@ -615,7 +630,7 @@ function fitMap() {
     }
   });
   if (!bounds.isEmpty()) {
-    map.fitBounds(bounds, { padding: 60, maxZoom: 12, duration: 800 });
+    map.fitBounds(bounds, { padding: 80, maxZoom: 14, duration: 1000 });
   }
 }
 
