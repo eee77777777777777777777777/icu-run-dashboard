@@ -1,0 +1,728 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>跑步热力图 - ICU 跑步看板</title>
+  <link rel="stylesheet" href="/css/design.css" />
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+  <script src="/js/i18n.js" defer></script>
+  <style>
+    body { height: 100vh; overflow: hidden; margin: 0; }
+    .heatmap-layout {
+      display: flex;
+      height: 100vh;
+    }
+    #map {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    aside {
+      width: 320px;
+      height: 100vh;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg, #f8fafc);
+      border-right: 1px solid var(--border, #e2e8f0);
+      z-index: 10;
+    }
+    .sidebar-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border, #e2e8f0);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .sidebar-header strong {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text, #1e293b);
+    }
+    .sidebar-header a {
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--text-muted, #94a3b8);
+      text-decoration: none;
+      padding: 4px 10px;
+      border-radius: var(--radius-sm, 6px);
+      border: 1px solid var(--border, #e2e8f0);
+    }
+    .sidebar-header a:hover {
+      background: var(--border, #e2e8f0);
+    }
+    .filter-section {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border, #e2e8f0);
+    }
+    .filter-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted, #94a3b8);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .filter-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .filter-chip {
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border-light, #cbd5e1);
+      background: var(--card-bg, #fff);
+      color: var(--text-secondary, #475569);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .filter-chip:hover {
+      border-color: var(--accent, #f97316);
+      color: var(--accent, #f97316);
+    }
+    .filter-chip.active {
+      background: var(--accent, #f97316);
+      color: #fff;
+      border-color: var(--accent, #f97316);
+      font-weight: 600;
+    }
+    .activity-list {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+    .activity-item {
+      padding: 10px 16px;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      transition: all 0.12s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .activity-item:hover {
+      background: var(--border, #e2e8f0);
+    }
+    .activity-item.active {
+      border-left-color: var(--accent, #f97316);
+      background: rgba(249, 115, 22, 0.06);
+    }
+    .act-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .act-icon.Run, .act-icon.VirtualRun { background: #fff7ed; color: #f97316; }
+    .act-icon.Ride, .act-icon.VirtualRide { background: #eff6ff; color: #3b82f6; }
+    .act-icon.Swim { background: #f0fdf4; color: #16a34a; }
+    .act-info { min-width: 0; }
+    .act-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text, #1e293b);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .act-meta {
+      font-size: 11px;
+      color: var(--text-muted, #94a3b8);
+    }
+    .map-overlay {
+      position: absolute;
+      top: 12px;
+      left: 332px;
+      z-index: 5;
+      display: flex;
+      gap: 6px;
+    }
+    .map-overlay .filter-chip {
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    .basemap-switch {
+      position: absolute;
+      bottom: 24px;
+      right: 16px;
+      z-index: 5;
+      display: flex;
+      gap: 4px;
+      background: var(--card-bg, #fff);
+      border-radius: 8px;
+      padding: 4px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    }
+    .basemap-btn {
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary, #475569);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .basemap-btn.active {
+      background: var(--accent, #f97316);
+      color: #fff;
+    }
+    .coord-hint {
+      position: absolute;
+      bottom: 24px;
+      left: 332px;
+      z-index: 5;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      font-size: 11px;
+      display: none;
+    }
+    .popup-content {
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .popup-content strong {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+    .popup-content a {
+      color: var(--accent, #f97316);
+      font-size: 12px;
+    }
+    .loading-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 20;
+      background: var(--card-bg, #fff);
+      padding: 16px 28px;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+      font-size: 14px;
+      color: var(--text-secondary, #475569);
+    }
+    .lang-toggle {
+      position: absolute;
+      top: 12px;
+      right: 16px;
+      z-index: 20;
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1.5px solid var(--border-light, #cbd5e1);
+      background: var(--card-bg, #fff);
+      color: var(--text-secondary, #475569);
+      font: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .lang-toggle:hover {
+      border-color: var(--accent, #f97316);
+      color: var(--accent, #f97316);
+    }
+    @media (max-width: 768px) {
+      aside { width: 260px; }
+      .map-overlay { left: 272px; }
+      .coord-hint { left: 272px; }
+    }
+  </style>
+</head>
+<body>
+<div class="heatmap-layout">
+  <aside>
+    <div class="sidebar-header">
+      <strong>跑步热力图</strong>
+      <a href="/">← 返回首页</a>
+    </div>
+
+    <div class="filter-section">
+      <div class="filter-label">运动类型</div>
+      <div class="filter-row" id="type-filters">
+        <button class="filter-chip active" data-type="">全部</button>
+      </div>
+    </div>
+
+    <div class="filter-section">
+      <div class="filter-label">年份</div>
+      <div class="filter-row" id="year-filters">
+        <button class="filter-chip active" data-year="">全部</button>
+      </div>
+    </div>
+
+    <div class="filter-section">
+      <div class="filter-label">月份</div>
+      <div class="filter-row" id="month-filters">
+        <button class="filter-chip active" data-month="">全部</button>
+      </div>
+    </div>
+
+    <div class="activity-list" id="activity-list"></div>
+  </aside>
+
+  <div id="map"></div>
+
+  <div class="map-overlay" id="map-overlay"></div>
+  <div class="basemap-switch" id="basemap-switch">
+    <button class="basemap-btn active" data-basemap="osm">OSM</button>
+    <button class="basemap-btn" data-basemap="geoq">GeoQ 灰色</button>
+  </div>
+  <div class="coord-hint" id="coord-hint">国内轨迹纠偏</div>
+  <div class="loading-overlay" id="loading-overlay">加载轨迹数据中...</div>
+  <button id="lang-toggle" class="lang-toggle" onclick="toggleLang()" title="Switch language">EN</button>
+</div>
+
+<script>
+// ===== STATE =====
+var state = {
+  data: null,
+  features: [],
+  filteredFeatures: [],
+  currentType: "",
+  currentYear: "",
+  currentMonth: "",
+  currentZoom: 1,
+  basemap: "osm",
+  selectedId: null
+};
+
+// ===== MAP SETUP =====
+var map = new maplibregl.Map({
+  container: "map",
+  style: {
+    version: 8,
+    sources: {
+      "osm-tiles": {
+        type: "raster",
+        tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+        tileSize: 256,
+        maxzoom: 19,
+        attribution: "&copy; OpenStreetMap"
+      },
+      "geoq-tiles": {
+        type: "raster",
+        tiles: ["https://thematic.geoq.cn/arcgis/rest/services/ChinaOnlineStreetGray/MapServer/tile/{z}/{y}/{x}"],
+        tileSize: 256,
+        maxzoom: 18
+      }
+    },
+    layers: [
+      { id: "osm-layer", type: "raster", source: "osm-tiles" },
+      { id: "geoq-layer", type: "raster", source: "geoq-tiles", layout: { visibility: "none" } }
+    ]
+  },
+  center: [104, 36],
+  zoom: 3,
+  renderWorldCopies: false
+});
+
+map.on("style.load", function() {
+  if (map.setProjection) {
+    try { map.setProjection({ type: "globe" }); } catch(e) {}
+  }
+  if (map.setFog) {
+    try { map.setFog({ range: [0.5, 8], color: "#f8fafc", "high-color": "#cbd5e1" }); } catch(e) {}
+  }
+});
+
+// ===== TRACK LAYER =====
+map.on("load", function() {
+  map.addSource("tracks", {
+    type: "geojson",
+    data: { type: "FeatureCollection", features: [] }
+  });
+
+  map.addLayer({
+    id: "tracks-line",
+    type: "line",
+    source: "tracks",
+    paint: {
+      "line-color": ["match", ["get", "type"], "Run", "#f97316", "VirtualRun", "#f97316", "Ride", "#3b82f6", "VirtualRide", "#3b82f6", "Swim", "#16a34a", "#8b5cf6"],
+      "line-width": ["interpolate", ["linear"], ["zoom"], 7, 1, 10, 2, 13, 3],
+      "line-opacity": ["interpolate", ["linear"], ["zoom"], 7, 0.3, 9, 0.5, 12, 0.8],
+      "line-blur": ["interpolate", ["linear"], ["zoom"], 7, 0.5, 10, 0],
+      "line-cap": "round",
+      "line-join": "round"
+    }
+  });
+
+  // Click handler
+  map.on("click", "tracks-line", function(e) {
+    if (e.features && e.features.length) {
+      var props = e.features[0].properties;
+      showPopup(props, e.lngLat);
+      highlightActivity(props.id);
+    }
+  });
+
+  // Hover cursor
+  map.on("mouseenter", "tracks-line", function() { map.getCanvas().style.cursor = "pointer"; });
+  map.on("mouseleave", "tracks-line", function() { map.getCanvas().style.cursor = ""; });
+
+  loadData();
+});
+
+// ===== ZOOM HANDLER =====
+var lastDetail = null;
+map.on("zoomend", function() {
+  var z = Math.round(map.getZoom());
+  if (z !== state.currentZoom) {
+    state.currentZoom = z;
+    var detail = detailForZoom(z);
+    if (detail !== lastDetail) {
+      lastDetail = detail;
+      renderTracks();
+    }
+  }
+});
+
+function detailForZoom(z) {
+  if (z >= 12) return "original";
+  if (z >= 11) return "high";
+  if (z >= 9)  return "medium";
+  if (z >= 7)  return "low";
+  return "overview";
+}
+
+// ===== DATA LOADING =====
+async function loadData() {
+  try {
+    var params = new URLSearchParams({ zoom: state.currentZoom });
+    if (state.currentType) params.set("type", state.currentType);
+    if (state.currentYear) params.set("year", state.currentYear);
+    if (state.currentMonth) params.set("month", state.currentMonth);
+
+    var resp = await fetch("/api/heatmap?" + params.toString());
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+
+    state.data = await resp.json();
+    state.features = state.data.features || [];
+    state.filteredFeatures = state.features;
+
+    document.getElementById("loading-overlay").style.display = "none";
+    buildFilters();
+    renderTracks();
+    renderActivityList();
+    fitMap();
+  } catch(e) {
+    document.getElementById("loading-overlay").textContent = "加载失败: " + e.message;
+    console.error("Heatmap load error:", e);
+  }
+}
+
+// ===== FILTERS =====
+function buildFilters() {
+  var features = state.features;
+  var types = {}, years = {}, months = {};
+
+  features.forEach(function(f) {
+    var p = f.properties;
+    types[p.type] = (types[p.type] || 0) + 1;
+    if (p.date && p.date.length >= 7) {
+      var yr = p.date.slice(0, 4);
+      var mo = p.date.slice(5, 7);
+      years[yr] = (years[yr] || 0) + 1;
+      months[mo] = (months[mo] || 0) + 1;
+    }
+  });
+
+  renderChips("type-filters", types, "type", state.currentType);
+  renderChips("year-filters", years, "year", state.currentYear, true);
+  renderChips("month-filters", months, "month", state.currentMonth);
+
+  // Update map overlay with active filters
+  var overlay = document.getElementById("map-overlay");
+  var chips = [];
+  if (state.currentType) chips.push('<span class="filter-chip active">' + state.currentType + '</span>');
+  if (state.currentYear) chips.push('<span class="filter-chip active">' + state.currentYear + '</span>');
+  if (state.currentMonth) chips.push('<span class="filter-chip active">' + state.currentMonth + '月</span>');
+  overlay.innerHTML = chips.join("");
+}
+
+function renderChips(containerId, counts, key, currentVal, sortDesc) {
+  var container = document.getElementById(containerId);
+  var keys = Object.keys(counts);
+  if (sortDesc) keys.sort().reverse();
+
+  var html = '<button class="filter-chip' + (currentVal === "" ? " active" : "") + '" data-' + key + '="">全部</button>';
+  keys.forEach(function(k) {
+    html += '<button class="filter-chip' + (currentVal === k ? " active" : "") + '" data-' + key + '="' + k + '">' + k + ' (' + counts[k] + ')</button>';
+  });
+  container.innerHTML = html;
+
+  container.querySelectorAll(".filter-chip").forEach(function(chip) {
+    chip.addEventListener("click", function() {
+      var val = chip.getAttribute("data-" + key);
+      if (key === "type") state.currentType = val;
+      else if (key === "year") state.currentYear = val;
+      else if (key === "month") state.currentMonth = val;
+
+      // Rebuild month filters when year changes
+      if (key === "year") {
+        var months = {};
+        state.features.forEach(function(f) {
+          var p = f.properties;
+          if (p.date && p.date.length >= 7 && (!val || p.date.slice(0, 4) === val)) {
+            var mo = p.date.slice(5, 7);
+            months[mo] = (months[mo] || 0) + 1;
+          }
+        });
+        if (!months[state.currentMonth]) state.currentMonth = "";
+        renderChips("month-filters", months, "month", state.currentMonth);
+      }
+      if (key === "type" || key === "year") {
+        // Rebuild dependent filters
+        buildFilters();
+      }
+
+      applyFilters();
+    });
+  });
+}
+
+function applyFilters() {
+  state.filteredFeatures = state.features.filter(function(f) {
+    var p = f.properties;
+    if (state.currentType && p.type !== state.currentType) return false;
+    if (state.currentYear && (!p.date || !p.date.startsWith(state.currentYear))) return false;
+    if (state.currentMonth && (!p.date || p.date.slice(5,7) !== state.currentMonth.padStart(2,"0"))) return false;
+    return true;
+  });
+
+  buildFilters();
+  renderTracks();
+  renderActivityList();
+  fitMap();
+}
+
+// ===== RENDER TRACKS =====
+function renderTracks() {
+  var features = state.filteredFeatures;
+  var source = map.getSource("tracks");
+  if (!source) return;
+
+  var correctedFeatures = state.basemap === "geoq" ? features.map(correctFeature) : features;
+
+  source.setData({
+    type: "FeatureCollection",
+    features: correctedFeatures
+  });
+}
+
+// ===== COORDINATE CORRECTION (WGS84 -> GCJ-02) =====
+var CHINA_BOUNDS = { minLng: 72, maxLng: 137, minLat: 0.8, maxLat: 55 };
+
+function inChina(lng, lat) {
+  return lng >= CHINA_BOUNDS.minLng && lng <= CHINA_BOUNDS.maxLng && lat >= CHINA_BOUNDS.minLat && lat <= CHINA_BOUNDS.maxLat;
+}
+
+function wgs84ToGcj02(lng, lat) {
+  var a = 6378245.0;
+  var ee = 0.00669342162296594323;
+  var dLat = transformLat(lng - 105, lat - 35);
+  var dLng = transformLng(lng - 105, lat - 35);
+  var radLat = lat / 180 * Math.PI;
+  var magic = Math.sin(radLat);
+  magic = 1 - ee * magic * magic;
+  var sqrtMagic = Math.sqrt(magic);
+  dLat = (dLat * 180) / ((a * (1 - ee)) / (magic * sqrtMagic) * Math.PI);
+  dLng = (dLng * 180) / (a / sqrtMagic * Math.cos(radLat) * Math.PI);
+  return [lng + dLng, lat + dLat];
+}
+
+function transformLat(x, y) {
+  var ret = -100 + 2*x + 3*y + 0.2*y*y + 0.1*x*y + 0.2*Math.sqrt(Math.abs(x));
+  ret += (20*Math.sin(6*x*Math.PI) + 20*Math.sin(2*x*Math.PI)) * 2/3;
+  ret += (20*Math.sin(y*Math.PI) + 40*Math.sin(y/3*Math.PI)) * 2/3;
+  ret += (160*Math.sin(y/12*Math.PI) + 320*Math.sin(y*Math.PI/30)) * 2/3;
+  return ret;
+}
+
+function transformLng(x, y) {
+  var ret = 300 + x + 2*y + 0.1*x*x + 0.1*x*y + 0.1*Math.sqrt(Math.abs(x));
+  ret += (20*Math.sin(6*x*Math.PI) + 20*Math.sin(2*x*Math.PI)) * 2/3;
+  ret += (20*Math.sin(x*Math.PI) + 40*Math.sin(x/3*Math.PI)) * 2/3;
+  ret += (150*Math.sin(x/12*Math.PI) + 300*Math.sin(x/30*Math.PI)) * 2/3;
+  return ret;
+}
+
+function correctFeature(feature) {
+  var geom = feature.geometry;
+  if (!geom) return feature;
+
+  var corrected = JSON.parse(JSON.stringify(feature));
+  if (geom.type === "LineString") {
+    corrected.geometry.coordinates = geom.coordinates.map(function(c) {
+      return inChina(c[0], c[1]) ? wgs84ToGcj02(c[0], c[1]) : c;
+    });
+  } else if (geom.type === "MultiLineString") {
+    corrected.geometry.coordinates = geom.coordinates.map(function(line) {
+      return line.map(function(c) {
+        return inChina(c[0], c[1]) ? wgs84ToGcj02(c[0], c[1]) : c;
+      });
+    });
+  }
+  return corrected;
+}
+
+// ===== BASEMAP SWITCHING =====
+document.getElementById("basemap-switch").addEventListener("click", function(e) {
+  var btn = e.target.closest(".basemap-btn");
+  if (!btn) return;
+
+  var basemap = btn.getAttribute("data-basemap");
+  state.basemap = basemap;
+
+  document.querySelectorAll(".basemap-btn").forEach(function(b) { b.classList.remove("active"); });
+  btn.classList.add("active");
+
+  if (basemap === "osm") {
+    map.setLayoutProperty("osm-layer", "visibility", "visible");
+    map.setLayoutProperty("geoq-layer", "visibility", "none");
+  } else {
+    map.setLayoutProperty("osm-layer", "visibility", "none");
+    map.setLayoutProperty("geoq-layer", "visibility", "visible");
+  }
+
+  document.getElementById("coord-hint").style.display = basemap === "geoq" ? "block" : "none";
+  renderTracks();
+});
+
+// ===== FIT MAP =====
+function fitMap() {
+  if (state.filteredFeatures.length === 0) return;
+  var bounds = new maplibregl.LngLatBounds();
+  state.filteredFeatures.forEach(function(f) {
+    var coords = f.geometry.coordinates;
+    if (f.geometry.type === "MultiLineString") {
+      coords.forEach(function(line) { line.forEach(function(c) { bounds.extend(c); }); });
+    } else {
+      coords.forEach(function(c) { bounds.extend(c); });
+    }
+  });
+  if (!bounds.isEmpty()) {
+    map.fitBounds(bounds, { padding: 60, maxZoom: 12, duration: 800 });
+  }
+}
+
+// ===== POPUP =====
+var currentPopup = null;
+
+function showPopup(props, lngLat) {
+  if (currentPopup) currentPopup.remove();
+
+  var distKm = parseDistance(props.name);
+  var pace = parsePace(props.name);
+  var hr = parseHR(props.name);
+
+  var html = '<div class="popup-content">';
+  html += '<strong>' + escapeHtml(props.name || "未命名") + '</strong>';
+  html += '<div style="color:var(--text-muted, #94a3b8);font-size:12px">' + (props.type || "") + ' · ' + (props.date || "") + '</div>';
+  if (distKm) html += '<div>距离: ' + distKm + ' km</div>';
+  if (pace) html += '<div>配速: ' + pace + '</div>';
+  if (hr) html += '<div>心率: ' + hr + ' bpm</div>';
+  html += '<div style="font-size:11px;color:var(--text-muted, #94a3b8)">点数: ' + (props.simplified_count || props.point_count || 0) + '</div>';
+  html += '<a href="https://www.strava.com/activities/' + props.id + '" target="_blank">Strava →</a>';
+  html += '</div>';
+
+  currentPopup = new maplibregl.Popup({ offset: 14, closeButton: true, maxWidth: "280px" })
+    .setLngLat(lngLat)
+    .setHTML(html)
+    .addTo(map);
+}
+
+// ===== ACTIVITY LIST =====
+function renderActivityList() {
+  var container = document.getElementById("activity-list");
+  var list = state.filteredFeatures.slice().sort(function(a, b) {
+    return (b.properties.date || "").localeCompare(a.properties.date || "");
+  });
+
+  var html = "";
+  list.forEach(function(f) {
+    var p = f.properties;
+    var icon = p.type === "Ride" || p.type === "VirtualRide" ? "🚴" : p.type === "Swim" ? "🏊" : "🏃";
+    var dist = parseDistance(p.name);
+    var active = state.selectedId === p.id ? " active" : "";
+
+    html += '<div class="activity-item' + active + '" data-id="' + p.id + '">';
+    html += '<div class="act-icon ' + (p.type || "Run") + '">' + icon + '</div>';
+    html += '<div class="act-info">';
+    html += '<div class="act-name">' + escapeHtml(p.name || "未命名") + '</div>';
+    html += '<div class="act-meta">' + (p.date || "") + (dist ? " · " + dist + " km" : "") + '</div>';
+    html += '</div></div>';
+  });
+
+  container.innerHTML = html || '<div style="padding:20px;color:var(--text-muted);text-align:center">暂无匹配活动</div>';
+
+  container.querySelectorAll(".activity-item").forEach(function(item) {
+    item.addEventListener("click", function() {
+      var id = item.getAttribute("data-id");
+      state.selectedId = id;
+      highlightActivity(id);
+      renderActivityList();
+
+      // Fly to the feature
+      var feature = state.filteredFeatures.find(function(f) { return f.properties.id === id; });
+      if (feature && feature.geometry) {
+        var coords = feature.geometry.type === "MultiLineString" ? feature.geometry.coordinates[0] : feature.geometry.coordinates;
+        if (coords && coords.length) {
+          var mid = coords[Math.floor(coords.length / 2)];
+          map.flyTo({ center: mid, zoom: Math.max(map.getZoom(), 13), duration: 600 });
+          showPopup(feature.properties, mid);
+        }
+      }
+    });
+  });
+}
+
+function highlightActivity(id) {
+  state.selectedId = id;
+  map.setFilter("tracks-line-highlight", id ? ["==", ["get", "id"], id] : null);
+}
+
+// ===== HELPERS =====
+function parseDistance(name) {
+  var m = (name || "").match(/([\d.]+)\s*km/i);
+  return m ? m[1] : null;
+}
+
+function parsePace(name) {
+  var m = (name || "").match(/(\d+:\d+)\s*\/\s*km/i);
+  return m ? m[1] : null;
+}
+
+function parseHR(name) {
+  var m = (name || "").match(/(\d{2,3})\s*bpm/i);
+  return m ? m[1] : null;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+// ===== INIT =====
+if (typeof toggleLang === "undefined") {
+  window.toggleLang = function() {
+    var lang = (localStorage.getItem("sport-lang") || "zh") === "zh" ? "en" : "zh";
+    localStorage.setItem("sport-lang", lang);
+    location.reload();
+  };
+}
+</script>
+</body>
+</html>
