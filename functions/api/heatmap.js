@@ -1,3 +1,4 @@
+// redeploy trigger
 // Cloudflare Pages Function: /api/heatmap
 // Proxies GearAut heatmap API, decodes polylines, returns GeoJSON
 export async function onRequest(context) {
